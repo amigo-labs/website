@@ -65,7 +65,10 @@ jobs:
           fi
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      # `wrangler deploy` runs the [build] command from wrangler.toml first.
+      - if: steps.creds.outputs.ok == 'true'
+        run: pnpm install --frozen-lockfile && pnpm run build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - if: steps.creds.outputs.ok == 'true'
         run: pnpm exec wrangler deploy
         env:

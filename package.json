@@ -10,7 +10,7 @@
     "data": "node scripts/fetch-data.ts",
     "data:local": "node scripts/fetch-data.ts --local .. --gh",
     "dev": "astro dev",
-    "build": "node scripts/fetch-data.ts && astro build",
+    "build": "node scripts/fetch-data.ts --strict-on-main && astro build",
     "build:local": "node scripts/fetch-data.ts --local .. --gh && astro build",
     "preview": "astro preview",
     "check": "astro check"
