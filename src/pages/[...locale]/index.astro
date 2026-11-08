@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import ProjectCard from '../../components/ProjectCard.astro';
+import ProjectIcon from '../../components/ProjectIcon.astro';
 import { allReleases, isShipping, projects, versionOf } from '../../lib/data.ts';
 import { formatDate, href, localeFromParam, localeParams, ui } from '../../lib/i18n.ts';
 
@@ -64,7 +65,7 @@ const recent = allReleases()
           {recent.map(({ project: p, release: r }) => (
             <li style={`--accent:${p.accent}`}>
               <a href={href(locale, `/${p.slug}/releases/#${encodeURIComponent(r.tag)}`)}>
-                <i aria-hidden="true" />
+                <ProjectIcon project={p} size={22} />
                 <span class="name">{p.name}</span>
                 <span class="ver">{p.releases.versioned ? versionOf(r) : r.name}</span>
                 <time datetime={r.date}>{formatDate(r.date, locale)}</time>
@@ -172,7 +173,7 @@ const recent = allReleases()
   }
   .feed a {
     display: grid;
-    grid-template-columns: 10px minmax(0, 1fr) auto auto;
+    grid-template-columns: 22px minmax(0, 1fr) auto auto;
     align-items: center;
     gap: 14px;
     padding: 12px 14px;
@@ -181,12 +182,6 @@ const recent = allReleases()
   }
   .feed a:hover {
     background: var(--surface-2);
-  }
-  .feed i {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    background: var(--accent);
   }
   .name {
     font-weight: 550;
@@ -203,7 +198,7 @@ const recent = allReleases()
   }
   @media (max-width: 560px) {
     .feed a {
-      grid-template-columns: 10px 1fr auto;
+      grid-template-columns: 22px 1fr auto;
     }
     time {
       grid-column: 2 / -1;

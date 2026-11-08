@@ -1,5 +1,6 @@
 ---
-// A project's logo from its docs/site/, or its initial on its accent color.
+// A project's mark: its pixel monogram in its accent colour (src/lib/monogram.ts).
+import { monogramSvg } from '../lib/monogram.ts';
 import type { Project } from '../lib/schema.ts';
 
 interface Props {
@@ -7,32 +8,20 @@ interface Props {
   size?: number;
 }
 const { project, size = 48 } = Astro.props;
-const initial = project.name.replace(/^amigo-/, '').charAt(0).toUpperCase();
+const svg = monogramSvg(project.monogram, project.accent);
 ---
 
-{
-  project.icon ? (
-    <img class="icon" src={project.icon} width={size} height={size} alt="" loading="lazy" />
-  ) : (
-    <span class="icon letter" style={`width:${size}px;height:${size}px;font-size:${size * 0.5}px`} aria-hidden="true">
-      {initial}
-    </span>
-  )
-}
+<span class="mark" style={`width:${size}px;height:${size}px`} aria-hidden="true" set:html={svg} />
 
 <style>
-  .icon {
-    border-radius: 22%;
+  .mark {
+    display: inline-block;
     flex: none;
-    object-fit: contain;
+    image-rendering: pixelated;
   }
-  .letter {
-    display: grid;
-    place-items: center;
-    background: var(--accent-soft);
-    border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
-    color: var(--accent-ink);
-    font-family: var(--mono);
-    font-weight: 700;
+  .mark :global(svg) {
+    width: 100%;
+    height: 100%;
+    display: block;
   }
 </style>

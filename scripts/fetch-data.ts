@@ -34,6 +34,7 @@ import {
   type Project,
   type Release,
 } from '../src/lib/schema.ts';
+import { defaultMonogram } from '../src/lib/monogram.ts';
 
 const root = resolve(import.meta.dirname, '..');
 const args = process.argv.slice(2);
@@ -202,6 +203,7 @@ async function loadProject(repo: string): Promise<Project | undefined> {
     ...rest,
     repo,
     repoUrl: `https://github.com/${repo}`,
+    monogram: file.monogram ?? defaultMonogram(file.name),
     ...(icon ? { icon } : {}),
     screenshots,
     pages,
