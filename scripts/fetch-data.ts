@@ -12,6 +12,8 @@
 //                                              falling back to GitHub where a checkout has none
 //   --offline                                  skip the Releases API (no downloads, no notes)
 //   --strict                                   fail when a repository has no docs/site/project.yml
+//   --strict-on-main                           --strict, but only when building main (Workers Builds sets
+//                                              WORKERS_CI_BRANCH; preview builds of other branches only warn)
 //   --gh                                       call the API through the gh CLI (its login) instead of fetch
 //   --only owner/repo                          check one repository only (the project repos' CI); writes nothing
 //
@@ -42,7 +44,9 @@ const offline = flag('--offline');
 const viaGh = flag('--gh');
 const onlyIdx = args.indexOf('--only');
 const only = onlyIdx >= 0 ? args[onlyIdx + 1] : undefined;
-const strict = flag('--strict') || only !== undefined;
+const branch = process.env.WORKERS_CI_BRANCH;
+const strict =
+  flag('--strict') || only !== undefined || (flag('--strict-on-main') && (branch === undefined || branch === 'main'));
 const token = process.env.GITHUB_TOKEN;
 
 const SITE_DIR = 'docs/site';

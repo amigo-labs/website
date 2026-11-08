@@ -20,7 +20,7 @@ routes = [
 ]
 
 [build]
-command = "corepack enable && pnpm install --frozen-lockfile && node scripts/fetch-data.ts --strict && pnpm exec astro build"
+command = "corepack enable && pnpm install --frozen-lockfile && node scripts/fetch-data.ts --strict-on-main && pnpm exec astro build"
 
 [assets]
 directory = "./dist"
