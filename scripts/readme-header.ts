@@ -77,7 +77,7 @@ if (!target) {
   const b = readme.indexOf(BEGIN);
   const e = readme.indexOf(END);
   if (b >= 0 && e > b) next = readme.slice(0, b) + block + readme.slice(e + END.length);
-  else if (/^# .*\n/.test(readme)) next = readme.replace(/^# .*\n/, `${block}\n`);
+  else if (/^# .*(\n|$)/.test(readme)) next = readme.replace(/^# .*(\n|$)/, `${block}\n`);
   else next = `${block}\n\n${readme}`;
   await writeFile(target, next);
   console.log(`${file.name}: header → ${target}`);
