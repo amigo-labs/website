@@ -30,8 +30,11 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Strict on main: a project that loses its docs/site/project.yml fails
+      # the deploy instead of silently disappearing. Pull requests only warn,
+      # so a project can be added here before its data is merged.
       - name: Fetch project data
-        run: node scripts/fetch-data.ts --strict
+        run: node scripts/fetch-data.ts ${{ github.event_name != 'pull_request' && '--strict' || '' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - run: pnpm exec astro check
