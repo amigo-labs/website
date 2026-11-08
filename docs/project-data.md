@@ -1,0 +1,185 @@
+# Project data: `docs/site/project.yml`
+
+Everything amigo-labs.dev shows about a project comes from the project's own
+repository and its GitHub releases. Nothing about a project is written into
+this website repository, so a release or a new feature never needs a change
+here.
+
+| What the site shows | Where it comes from |
+| ------------------- | ------------------- |
+| Name, tagline, summary, features, comparisons, install commands | `docs/site/project.yml` in the project repository |
+| Logo, screenshots | files next to it in `docs/site/`, named in `project.yml` |
+| Benchmarks | YAML or JSON files in `docs/site/`, named in `project.yml` (generate them with the project's own tooling) |
+| Version, download links, file sizes | the latest GitHub release and its assets |
+| Release notes | the bodies of the GitHub releases (release-please writes them from the changelog) |
+| Package catalog (monorepos) | a JSON file in the repository, e.g. amigo-native's `docs/packages.json` |
+
+The site is rebuilt every hour, on every push to this repository and when a
+project sends a `project-updated` dispatch (see "Faster updates" below). The
+schema is `src/lib/schema.ts`; a file that does not match it fails the build
+with the path of every wrong field.
+
+## Adding a project
+
+1. Write `docs/site/project.yml` in the project repository (below) and merge it.
+2. Add the repository to `projects.json` here. The order there is the order on the site.
+
+## Texts and languages
+
+The site is English (`/`) and German (`/de/`). Every text field takes either
+one string, used for both, or one string per language:
+
+```yaml
+tagline: Pixel art and image editor
+summary:
+  en: An editor for sprites, tiles and animation.
+  de: Ein Editor für Sprites, Tiles und Animationen.
+```
+
+English is required, German falls back to English. Release notes are shown
+as written on GitHub.
+
+## Fields
+
+```yaml
+schema: 1
+slug: pincel                 # URL: amigo-labs.dev/pincel/
+name: Pincel
+status: released             # released | beta | in-development | planned
+accent: "#29adff"            # the project's color on the site
+icon: icon.svg               # path inside docs/site/
+tagline: Pixel art and image editor
+summary: Two or three sentences for the project card and the page head.
+about: |                     # optional, Markdown, under the hero
+  Longer text.
+platforms: [windows, macos, linux, web]   # also: android, ios, docker, node, browser
+license: MIT OR Apache-2.0
+launch:                      # optional main button besides downloads
+  label: { en: Open in browser, de: Im Browser öffnen }
+  url: https://pincel.amigo-labs.dev/app/
+links:
+  - { label: Documentation, url: https://… }
+
+highlights:                  # up to four key figures under the hero
+  - { value: "10×", label: { en: faster than …, de: schneller als … } }
+
+screenshots:
+  - { src: screenshots/editor.png, alt: The editor with a sprite open }
+
+features:
+  - title: Layers and animation
+    text: Frames, tags, onion skin …
+  - title: Scripting
+    text: …
+    status: planned          # or in-progress; shipped features leave it out
+
+comparisons:
+  - title: { en: Compared with other editors, de: Im Vergleich }
+    intro: optional text above the table
+    asOf: 2026-10-20         # when the other columns were last checked
+    tools:
+      - { name: Pincel, own: true }
+      - { name: Aseprite, url: https://www.aseprite.org }
+    rows:
+      - feature: Tilemaps
+        cells: [yes, yes]                           # yes | no | partial
+      - feature: Price
+        cells:
+          - { text: { en: free, de: kostenlos } }
+          - { text: paid, source: https://… }       # source links the evidence
+      - feature: Scripting
+        cells:
+          - { mark: no, note: { en: planned, de: geplant } }
+          - { mark: yes, source: [https://a…, https://b…] }   # one link or several
+    note: optional footnote
+    sources:                 # optional list under the table
+      - { label: Aseprite docs, url: https://… }
+
+benchmarks:                  # files in docs/site/, shape below
+  - benchmarks/open.yml
+
+downloads:
+  files:                     # assets of the latest release
+    - { os: windows, label: Installer, arch: x64, asset: pincel-windows-x64-setup.exe }
+    - { os: linux, label: AppImage, arch: x64, match: "_amd64\\.AppImage$" }   # for versioned names
+  checksums: SHA256SUMS
+  install:                   # command-line installs, shown with a copy button
+    - { label: Docker, command: "docker run … ghcr.io/amigo-labs/…", requiresRelease: true }
+                             # requiresRelease: hidden until the first release exists
+  guide:                     # optional installation help (Markdown) under each system's downloads
+    windows: { en: …, de: … }
+    all: shown below every system
+
+releases:
+  tagPattern: "^v"           # optional: only tags that match
+  versioned: true            # false for monorepos with per-package releases
+
+catalog: docs/packages.json  # optional, path from the repository root
+
+sections:                    # optional free sections after the features (Markdown)
+  - { id: how-it-works, title: How it works, body: "1. …" }
+
+pages:                       # optional subpages at /<slug>/<page>/, Markdown files in docs/site/
+  - slug: embed
+    title: { en: Embed the editor, de: Den Editor einbetten }
+    body: { en: pages/embed.md, de: pages/embed.de.md }
+```
+
+Tool names, highlight values and benchmark names take a text per language
+too (`{ en: Windows Photos, de: Windows Fotos }`). Benchmark groups can
+override the file's `better` and `unit`, and a result can carry a `detail`
+such as `p95 93 ms`.
+
+Download files whose asset is missing from the latest release are left out,
+so a platform that has not shipped yet simply does not appear. Without any
+release, the download section says so and links the repository.
+
+### Benchmark files
+
+```yaml
+title: { en: Opening an image, de: Ein Bild öffnen }
+intro: optional text
+better: lower                # lower | higher
+unit: ms
+machine: Ryzen 7 6850H, Windows 11
+method: https://github.com/…/docs/benchmarks.md   # optional link to the method
+groups:
+  - label: 24 MP JPEG
+    results:
+      - { name: amigo-blinzel, value: 90, own: true }
+      - { name: Windows Photos, value: 1116 }
+```
+
+## Faster updates
+
+The hourly rebuild picks up every change. To show a release within a minute,
+add this job to the project's release workflow. It needs a secret
+`WEBSITE_DISPATCH_TOKEN`: a fine-grained token with "Contents: read and
+write" on `amigo-labs/website` only.
+
+```yaml
+  notify-website:
+    needs: [publish]          # the job that publishes the release
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${{ secrets.WEBSITE_DISPATCH_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/amigo-labs/website/dispatches \
+            -d '{"event_type":"project-updated"}'
+```
+
+## Checking a file locally
+
+With this repository next to the project checkouts:
+
+```bash
+pnpm install
+pnpm build:local     # reads ../<repo>/docs/site/, releases from GitHub
+pnpm preview
+```
+
+`node scripts/fetch-data.ts --local .. --offline` checks the files without
+touching the network beyond the project files of repositories that have no
+local checkout.

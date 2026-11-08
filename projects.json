@@ -1,0 +1,12 @@
+{
+  "$comment": "Repositories shown on the site, in this order. Each one keeps its own content in docs/site/project.yml (docs/project-data.md).",
+  "repositories": [
+    "amigo-labs/amigo-pincel",
+    "amigo-labs/amigo-blinzel",
+    "amigo-labs/amigo-downloader",
+    "amigo-labs/amigo-native",
+    "amigo-labs/amigo-sofarr",
+    "amigo-labs/amigo-trommel",
+    "amigo-labs/amigo-neoforo"
+  ]
+}
