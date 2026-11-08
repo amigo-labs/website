@@ -25,11 +25,16 @@ projects.json ──► scripts/fetch-data.ts ──► .data/projects.json ─�
                     └─ validates everything against src/lib/schema.ts
 ```
 
-[`.github/workflows/site.yml`](.github/workflows/site.yml) runs this on every
-push to `main`, every hour, on a `project-updated` repository dispatch and by
-hand, and deploys `dist/` to Cloudflare (`wrangler.toml`). Pull requests are
-built but not deployed. A project file that does not match the schema fails
-the build with the path of every wrong field.
+Cloudflare **Workers Builds** deploys every push to `main`: the Worker
+`website` is connected to this repository and runs `npx wrangler deploy`,
+which runs the `[build]` command from `wrangler.toml` first. The site is served
+at `https://amigo-labs.dev` (custom domain in `wrangler.toml`).
+
+Project changes don't push here, so
+[`.github/workflows/site.yml`](.github/workflows/site.yml) redeploys every hour,
+on a `project-updated` repository dispatch and by hand; it also checks pull
+requests and pushes. On `main` a project without `docs/site/project.yml` fails
+the build (`--strict`) instead of silently disappearing.
 
 Project repositories can check their `docs/site/` in their own pull requests
 with the reusable workflow
@@ -54,15 +59,11 @@ the anonymous rate limit). The other options of `scripts/fetch-data.ts`
 
 ## Deployment setup
 
-Secrets of this repository (environment `production`):
-
-| Secret | What |
-| ------ | ---- |
-| `CLOUDFLARE_API_TOKEN` | API token with "Workers Scripts: Edit" for the account |
-| `CLOUDFLARE_ACCOUNT_ID` | the Cloudflare account ID |
-
-The custom domain is configured in `wrangler.toml` (`[[routes]]`, commented
-out until the zone is in the account).
+| Where | Setting |
+| ----- | ------- |
+| Workers Builds (Worker `website` → Settings → Build) | Build command empty, deploy command `npx wrangler deploy`, build variable `GITHUB_TOKEN`: a read-only fine-grained token for public repositories (the build machines share GitHub's anonymous rate limit) |
+| This repository, environment `production` | `CLOUDFLARE_API_TOKEN` ("Workers Scripts: Edit") and `CLOUDFLARE_ACCOUNT_ID` for the hourly redeploy; without them that job only warns |
+| DNS of `amigo-labs.dev` | No A/AAAA/CNAME record of its own on the apex: the custom domain creates it |
 
 ## License
 

@@ -1,17 +1,28 @@
-# amigo-labs.dev — static assets only, no Worker code. The GitHub workflow
-# .github/workflows/site.yml builds dist/ (project data from the project
-# repositories and GitHub releases, scripts/fetch-data.ts) and deploys it
-# with `wrangler deploy`: on every push to main, every hour, and when a
-# project sends a `project-updated` dispatch.
-name = "amigo-labs-website"
+# amigo-labs.dev — static assets only, no Worker code.
+#
+# Deployed by Cloudflare Workers Builds (the Worker "website" is connected to
+# this repository): every push to main runs `npx wrangler deploy`, which runs
+# [build] below first. The build reads each project's docs/site/ and its
+# GitHub releases (scripts/fetch-data.ts), so the site also has to be rebuilt
+# when a project changes: .github/workflows/site.yml does that every hour and
+# on a `project-updated` dispatch.
+#
+# Workers Builds settings (dashboard → Worker → Settings → Build):
+#   Build command:   (empty — [build] below does it)
+#   Deploy command:  npx wrangler deploy
+#   Variable:        GITHUB_TOKEN — read-only token, avoids GitHub's
+#                    anonymous rate limit on shared build machines
+name = "website"
 compatibility_date = "2026-11-01"
+
+routes = [
+  { pattern = "amigo-labs.dev", custom_domain = true },
+]
+
+[build]
+command = "corepack enable && pnpm install --frozen-lockfile && node scripts/fetch-data.ts --strict && pnpm exec astro build"
 
 [assets]
 directory = "./dist"
 not_found_handling = "404-page"
 html_handling = "auto-trailing-slash"
-
-# Custom domain — set once the zone is in this Cloudflare account:
-# [[routes]]
-# pattern = "amigo-labs.dev"
-# custom_domain = true
