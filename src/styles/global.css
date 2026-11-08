@@ -6,16 +6,19 @@
 :root {
   color-scheme: dark light;
 
-  --bg: #0b0c0f;
-  --bg-raised: #111318;
-  --surface: #151820;
-  --surface-2: #1b1f28;
-  --line: #262b35;
-  --line-strong: #353b48;
-  --text: #ecebe7;
-  --text-2: #b9bcc4;
-  --muted: #8a909c;
-  --brand: #ff8a3d;
+  /* Night blue, signal yellow and teal glow from the amigo-labs pixel logo. */
+  --bg: #060f22;
+  --bg-raised: #0a1730;
+  --surface: #0d1b36;
+  --surface-2: #122244;
+  --line: #1c2d52;
+  --line-strong: #2a3f6e;
+  --text: #eef1f8;
+  --text-2: #b7c0d6;
+  --muted: #8592b0;
+  --brand: #f5e554;
+  --glow: #2fb0d0;
+  --night: #07152e;
   --ok: #4dd0a8;
   --warn: #e5b84b;
   --bad: #e5704b;
@@ -41,6 +44,7 @@
     --line: #e2e0d9;
     --line-strong: #cfccc3;
     --text: #17181c;
+    --brand: #8a6d00;
     --text-2: #3d4048;
     --muted: #646a74;
     --ok: #1d8a68;
