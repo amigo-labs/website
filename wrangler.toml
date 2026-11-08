@@ -4,7 +4,8 @@
 # runs the build command `pnpm run build` and then `npx wrangler deploy` on
 # main or `npx wrangler preview` on other branches. The build reads each
 # project's docs/site/ and its GitHub releases (scripts/fetch-data.ts);
-# .github/workflows/site.yml rebuilds hourly so project changes show up.
+# .github/workflows/site.yml commits data.lock.json when a project changed,
+# and that push starts the build.
 # Optional build variable GITHUB_TOKEN (read-only) avoids GitHub's anonymous
 # rate limit on the shared build machines.
 name = "website"

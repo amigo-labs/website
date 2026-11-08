@@ -12,5 +12,7 @@ pnpm data:local   # project data from ../<repo>/, releases via gh
 pnpm dev
 ```
 
-Deployed by Cloudflare Workers Builds (`wrangler.toml`) on every push to
-`main`, and hourly by [`site.yml`](.github/workflows/site.yml).
+Built and deployed by Cloudflare Workers Builds (`wrangler.toml`) on every
+push to `main`, without credentials in GitHub. Project changes become such a
+push: [`site.yml`](.github/workflows/site.yml) commits `data.lock.json`
+when a project changed (docs/project-data.md, "Updates").

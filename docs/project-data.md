@@ -14,9 +14,8 @@ here.
 | Release notes | the bodies of the GitHub releases (release-please writes them from the changelog) |
 | Package catalog (monorepos) | a JSON file in the repository, e.g. amigo-native's `docs/packages.json` |
 
-The site is rebuilt every hour, on every push to this repository and when a
-project sends a `project-updated` dispatch (see "Faster updates" below). The
-schema is `src/lib/schema.ts`; a file that does not match it fails the build
+A change in a project shows up on the site within about 15 minutes (see
+"Updates" below). The schema is `src/lib/schema.ts`; a file that does not match it fails the build
 with the path of every wrong field.
 
 ## Adding a project
@@ -204,25 +203,24 @@ GitHub shows `assets/brand/social-preview.png` (1280×640) when the
 repository is linked anywhere. It cannot be set through the API: upload it
 once under the repository's Settings → General → Social preview.
 
-## Faster updates
+## Updates
 
-The hourly rebuild picks up every change. To show a release within a minute,
-add this job to the project's release workflow. It needs a secret
-`WEBSITE_DISPATCH_TOKEN`: a fine-grained token with "Contents: read and
-write" on `amigo-labs/website` only.
+Cloudflare Workers Builds builds the site on every push to `main` here,
+the same Git integration the projects use for their own builds, and reads
+the project data fresh each time. Nothing in a project repository needs a
+token or a secret for that.
 
-```yaml
-  notify-website:
-    needs: [publish]          # the job that publishes the release
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          curl -fsS -X POST \
-            -H "Authorization: Bearer ${{ secrets.WEBSITE_DISPATCH_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/amigo-labs/website/dispatches \
-            -d '{"event_type":"project-updated"}'
-```
+So that a project change becomes such a push, the `refresh` job of
+[`site.yml`](../.github/workflows/site.yml) runs every 15 minutes: it fetches
+all project data (`node scripts/fetch-data.ts --strict --lock`) and writes
+[`data.lock.json`](../data.lock.json), the latest release and a hash of
+everything the site shows, per project. When that file changed, the job
+commits it to `main` (`chore(data): pincel v1.4.0, krake`), and Cloudflare
+rebuilds. When nothing changed, nothing is committed. Run the job by hand
+(Actions → site → Run workflow) to update at once.
+
+The job pushes with the workflow's own token, so the rules on `main` have to
+let `github-actions[bot]` push `data.lock.json` without a pull request.
 
 ## Checking a file locally
 

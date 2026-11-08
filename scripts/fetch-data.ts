@@ -16,13 +16,17 @@
 //                                              WORKERS_CI_BRANCH; preview builds of other branches only warn)
 //   --gh                                       call the API through the gh CLI (its login) instead of fetch
 //   --only owner/repo                          check one repository only (the project repos' CI); writes nothing
+//   --lock                                     also write data.lock.json: a fingerprint of each project's data,
+//                                              committed by the refresh job so a project change becomes a push
+//                                              that Cloudflare builds (.github/workflows/site.yml)
 //
 // GITHUB_TOKEN (optional) raises the API rate limit; CI sets it.
 
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 import {
@@ -43,6 +47,7 @@ const localIdx = args.indexOf('--local');
 const localRoot = localIdx >= 0 ? resolve(args[localIdx + 1] ?? '..') : undefined;
 const offline = flag('--offline');
 const viaGh = flag('--gh');
+const lock = flag('--lock');
 const onlyIdx = args.indexOf('--only');
 const only = onlyIdx >= 0 ? args[onlyIdx + 1] : undefined;
 const branch = process.env.WORKERS_CI_BRANCH;
@@ -254,6 +259,64 @@ async function main() {
   await mkdir(join(root, '.data'), { recursive: true });
   await writeFile(join(root, '.data', 'projects.json'), JSON.stringify(projects, null, 2));
   console.log(`\n${projects.length} projects → .data/projects.json`);
+  if (lock) await writeLock(projects);
+}
+
+/** Every file under `dir`, recursively, as paths relative to it (sorted). */
+async function files(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { recursive: true, withFileTypes: true }).catch(() => []);
+  return entries
+    .filter((e) => e.isFile())
+    .map((e) => relative(dir, join(e.parentPath, e.name)))
+    .sort();
+}
+
+/**
+ * Writes data.lock.json: per project its latest release and a hash of all it
+ * shows (the data without fetchedAt, and the copied images). It changes
+ * exactly when the site would change, and its diff names the projects.
+ * Writes .data/lock-message.txt with a commit message when it changed.
+ */
+async function writeLock(projects: Project[]) {
+  const entries: Record<string, { release: string | null; hash: string }> = {};
+  for (const p of projects) {
+    const { fetchedAt: _f, ...data } = p;
+    const hash = createHash('sha256').update(JSON.stringify(data));
+    const dir = join(root, 'public', 'p', p.slug);
+    for (const f of await files(dir)) hash.update(`\0${f}\0`).update(await readFile(join(dir, f)));
+    entries[p.slug] = {
+      release: p.releases.list.find((r) => !r.prerelease)?.tag ?? p.releases.list[0]?.tag ?? null,
+      hash: hash.digest('hex').slice(0, 16),
+    };
+  }
+  const path = join(root, 'data.lock.json');
+  const messageFile = join(root, '.data', 'lock-message.txt');
+  await rm(messageFile, { force: true });
+  const before = JSON.parse(await readFile(path, 'utf8').catch(() => '{"projects":{}}')) as {
+    projects: Record<string, { release: string | null; hash: string }>;
+  };
+  const changed = [...new Set([...Object.keys(before.projects), ...Object.keys(entries)])].filter(
+    (slug) => JSON.stringify(before.projects[slug]) !== JSON.stringify(entries[slug]),
+  );
+  const next = {
+    $comment: 'Written by `node scripts/fetch-data.ts --lock` (site.yml, refresh). A change here is a push, and Cloudflare rebuilds the site.',
+    projects: entries,
+  };
+  await writeFile(path, `${JSON.stringify(next, null, 2)}\n`);
+  if (!changed.length) {
+    console.log('data.lock.json: unchanged');
+    return;
+  }
+  const describe = (slug: string) => {
+    const a = before.projects[slug];
+    const b = entries[slug];
+    if (!b) return `${slug} removed`;
+    if (!a) return `${slug} added`;
+    return a.release !== b.release ? `${slug} ${b.release ?? 'without release'}` : slug;
+  };
+  const message = `chore(data): ${changed.map(describe).join(', ')}`;
+  await writeFile(messageFile, `${message}\n`);
+  console.log(`data.lock.json: ${message}`);
 }
 
 await main();
