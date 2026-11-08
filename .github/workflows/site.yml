@@ -1,17 +1,16 @@
 name: site
 
-# Pushes to main are deployed by Cloudflare Workers Builds (wrangler.toml).
-# This workflow checks pull requests and pushes, and redeploys when a
-# project changed without a push here: every hour and on a
-# `project-updated` dispatch (docs/project-data.md, "Faster updates").
+# Cloudflare Workers Builds builds and deploys every push to main
+# (wrangler.toml); no Cloudflare credentials live here. This workflow checks
+# pull requests and pushes, and every 15 minutes looks for project changes:
+# it fetches the project data and commits data.lock.json when it changed, so
+# the change reaches Cloudflare as a push (docs/project-data.md, "Updates").
 on:
   push:
     branches: [main]
   pull_request:
   schedule:
-    - cron: '17 * * * *'
-  repository_dispatch:
-    types: [project-updated]
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 concurrency:
@@ -43,35 +42,35 @@ jobs:
       - run: pnpm exec astro check
       - run: pnpm exec astro build
 
-  redeploy:
-    if: github.event_name != 'push' && github.event_name != 'pull_request'
+  refresh:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    environment: production
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: main
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: pnpm
-      - name: Check for Cloudflare credentials
-        id: creds
+      - run: pnpm install --frozen-lockfile
+      - name: Fetch project data
+        run: node scripts/fetch-data.ts --strict --lock
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      # A push with the workflow token starts no other workflow, but
+      # Cloudflare's Git integration builds it like any push to main.
+      - name: Commit data.lock.json
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::warning::CLOUDFLARE_API_TOKEN is not set; skipping the scheduled redeploy (README, \"Deployment\")."
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=true" >> "$GITHUB_OUTPUT"
+          if [ ! -f .data/lock-message.txt ]; then
+            echo "No project changed."
+            exit 0
           fi
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      - if: steps.creds.outputs.ok == 'true'
-        run: pnpm install --frozen-lockfile && pnpm run build
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - if: steps.creds.outputs.ok == 'true'
-        run: pnpm exec wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          GITHUB_TOKEN: ${{ github.token }}
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data.lock.json
+          git commit -q -F .data/lock-message.txt
+          git push origin HEAD:main || { git pull -q --rebase origin main && git push origin HEAD:main; }
