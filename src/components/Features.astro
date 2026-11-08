@@ -1,0 +1,61 @@
+---
+import { tx, ui, type Locale } from '../lib/i18n.ts';
+import type { Project } from '../lib/schema.ts';
+
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+const { project, locale } = Astro.props;
+const t = ui(locale);
+---
+
+<ul class="grid">
+  {
+    project.features.map((f) => (
+      <li class:list={['card', f.status && 'upcoming']}>
+        <div class="head">
+          <h3>{tx(f.title, locale)}</h3>
+          {f.status && <span class:list={['pill', f.status]}>{t.featureStatus[f.status]}</span>}
+        </div>
+        <p>{tx(f.text, locale)}</p>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 14px;
+  }
+  li {
+    padding: 22px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+    border-top: 2px solid color-mix(in oklab, var(--accent) 55%, var(--line));
+  }
+  li.upcoming {
+    border-top-color: var(--line);
+    background: transparent;
+  }
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 12px;
+  }
+  h3 {
+    font-size: 17px;
+    letter-spacing: -0.01em;
+  }
+  p {
+    color: var(--text-2);
+    font-size: 15px;
+  }
+</style>

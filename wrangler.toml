@@ -1,0 +1,17 @@
+# amigo-labs.dev — static assets only, no Worker code. The GitHub workflow
+# .github/workflows/site.yml builds dist/ (project data from the project
+# repositories and GitHub releases, scripts/fetch-data.ts) and deploys it
+# with `wrangler deploy`: on every push to main, every hour, and when a
+# project sends a `project-updated` dispatch.
+name = "amigo-labs-website"
+compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./dist"
+not_found_handling = "404-page"
+html_handling = "auto-trailing-slash"
+
+# Custom domain — set once the zone is in this Cloudflare account:
+# [[routes]]
+# pattern = "amigo-labs.dev"
+# custom_domain = true

@@ -1,0 +1,48 @@
+---
+import Base from '../../../layouts/Base.astro';
+import ReleaseEntry from '../../../components/ReleaseEntry.astro';
+import { allReleases } from '../../../lib/data.ts';
+import { localeFromParam, localeParams, ui } from '../../../lib/i18n.ts';
+
+export function getStaticPaths() {
+  return localeParams.map((params) => ({ params }));
+}
+
+const locale = localeFromParam(Astro.params.locale);
+const t = ui(locale);
+const feed = allReleases().slice(0, 60);
+---
+
+<Base locale={locale} title={`${t.allReleases} — ${t.siteName}`} description={t.siteIntro} path="/releases/">
+  <div class="wrap page">
+    <header>
+      <p class="label">{t.siteName}</p>
+      <h1>{t.allReleases}</h1>
+      <p><a href="/releases.xml">Atom feed</a></p>
+    </header>
+    <div>
+      {feed.length === 0 && <p>{t.noReleasesYet}</p>}
+      {feed.map(({ project, release }) => <ReleaseEntry project={project} release={release} locale={locale} withProject />)}
+    </div>
+  </div>
+</Base>
+
+<style>
+  .page {
+    display: grid;
+    gap: 40px;
+    padding-block: 56px 80px;
+    max-width: 860px;
+  }
+  header {
+    display: grid;
+    gap: 12px;
+  }
+  h1 {
+    font-size: clamp(32px, 5vw, 48px);
+  }
+  header a {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+</style>

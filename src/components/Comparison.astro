@@ -1,0 +1,201 @@
+---
+import { formatDate, tx, ui, type Locale } from '../lib/i18n.ts';
+import type { Cell, Comparison } from '../lib/schema.ts';
+
+interface Props {
+  comparison: Comparison;
+  locale: Locale;
+}
+const { comparison: c, locale } = Astro.props;
+const t = ui(locale);
+
+type Shown = { mark?: 'yes' | 'no' | 'partial'; text?: string; note?: string | undefined; sources: string[] };
+const list = (s: string | string[] | undefined) => (s === undefined ? [] : typeof s === 'string' ? [s] : s);
+function cell(v: Cell): Shown {
+  if (typeof v === 'string') return { mark: v, sources: [] };
+  if ('mark' in v) return { mark: v.mark, note: tx(v.note, locale) || undefined, sources: list(v.source) };
+  return { text: tx(v.text, locale), sources: list(v.source) };
+}
+const markLabel = { yes: t.yes, no: t.no, partial: t.partial };
+const markGlyph = { yes: '✓', no: '–', partial: '◐' };
+---
+
+<figure>
+  <figcaption>
+    <h3>{tx(c.title, locale)}</h3>
+    {c.intro && <p>{tx(c.intro, locale)}</p>}
+  </figcaption>
+  <div class="table-wrap" role="region" aria-label={tx(c.title, locale)} tabindex="0">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col"><span class="sr">{t.features}</span></th>
+          {
+            c.tools.map((tool) => (
+              <th scope="col" class:list={{ own: tool.own }}>
+                {tool.url ? <a href={tool.url} rel="noopener">{tx(tool.name, locale)}</a> : tx(tool.name, locale)}
+              </th>
+            ))
+          }
+        </tr>
+      </thead>
+      <tbody>
+        {
+          c.rows.map((row) => (
+            <tr>
+              <th scope="row">{tx(row.feature, locale)}</th>
+              {row.cells.map((raw, i) => {
+                const v = cell(raw);
+                const content = v.mark ? (
+                  <span class:list={['mark', v.mark]}>
+                    <span aria-hidden="true">{markGlyph[v.mark]}</span>
+                    <span class="sr">{markLabel[v.mark]}</span>
+                  </span>
+                ) : (
+                  <span class="text">{v.text}</span>
+                );
+                return (
+                  <td class:list={{ own: c.tools[i]?.own }}>
+                    {v.sources[0] ? <a class="src" href={v.sources[0]} rel="noopener">{content}</a> : content}
+                    {v.sources.slice(1).map((s, n) => (
+                      <a class="more" href={s} rel="noopener">[{n + 2}]</a>
+                    ))}
+                    {v.note && <span class="note">{v.note}</span>}
+                  </td>
+                );
+              })}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+  <p class="foot label">
+    {t.asOf} {formatDate(c.asOf, locale)}
+    {c.note && <span class="note-text">· {tx(c.note, locale)}</span>}
+  </p>
+  {
+    c.sources.length > 0 && (
+      <ul class="sources">
+        {c.sources.map((s) => (
+          <li><a href={s.url} rel="noopener">{tx(s.label, locale)}</a></li>
+        ))}
+      </ul>
+    )
+  }
+</figure>
+
+<style>
+  figure {
+    margin: 0;
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+  }
+  figcaption {
+    display: grid;
+    gap: 6px;
+  }
+  figcaption h3 {
+    font-size: 20px;
+  }
+  figcaption p {
+    color: var(--text-2);
+    max-width: 72ch;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  th,
+  td {
+    padding: 11px 14px;
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+  thead th {
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text-2);
+  }
+  thead th a {
+    text-decoration: none;
+  }
+  th[scope='row'] {
+    text-align: left;
+    font-weight: 500;
+    color: var(--text);
+    min-width: 160px;
+  }
+  .own {
+    background: var(--accent-soft);
+  }
+  thead .own {
+    color: var(--accent-ink);
+  }
+  .mark {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .mark.yes {
+    color: var(--ok);
+  }
+  .mark.no {
+    color: var(--muted);
+  }
+  .mark.partial {
+    color: var(--warn);
+  }
+  .text {
+    color: var(--text-2);
+  }
+  .src {
+    text-decoration: none;
+  }
+  .src:hover .text,
+  .src:hover .mark {
+    text-decoration: underline;
+  }
+  .note {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.35;
+    margin-top: 2px;
+  }
+  .foot {
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .more {
+    font: 11px var(--mono);
+    color: var(--muted);
+    margin-left: 3px;
+    text-decoration: none;
+  }
+  .sources {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    font-size: 13px;
+  }
+  .sources a {
+    color: var(--muted);
+  }
+  .sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+</style>

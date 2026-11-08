@@ -1,0 +1,166 @@
+---
+// Horizontal bars per group; the project's own result in its accent color.
+import { tx, ui, type Locale } from '../lib/i18n.ts';
+import type { Benchmark } from '../lib/schema.ts';
+
+interface Props {
+  benchmark: Benchmark;
+  locale: Locale;
+}
+const { benchmark: b, locale } = Astro.props;
+const t = ui(locale);
+const fmt = new Intl.NumberFormat(locale === 'de' ? 'de-DE' : 'en-GB', { maximumSignificantDigits: 3 });
+---
+
+<figure class="card">
+  <figcaption>
+    <h3>{tx(b.title, locale)}</h3>
+    {b.intro && <p>{tx(b.intro, locale)}</p>}
+  </figcaption>
+  {
+    b.groups.map((g) => {
+      const better = g.better ?? b.better;
+      const unit = g.unit ?? b.unit;
+      const sorted = [...g.results].sort((x, y) => (better === 'lower' ? x.value - y.value : y.value - x.value));
+      const max = Math.max(...sorted.map((r) => r.value));
+      return (
+        <div class="group">
+          <h4>
+            {tx(g.label, locale)}
+            <span class="label">
+              {unit} · {better === 'lower' ? t.lowerIsBetter : t.higherIsBetter}
+            </span>
+          </h4>
+          <dl>
+            {sorted.map((r) => (
+              <div class:list={['row', { own: r.own }]}>
+                <dt>{tx(r.name, locale)}</dt>
+                <dd>
+                  <span class="bar" style={`--w:${Math.max(1.5, (r.value / max) * 100)}%`} />
+                  <span class="val">
+                    {fmt.format(r.value)} {unit}
+                    {r.detail && <small> · {tx(r.detail, locale)}</small>}
+                  </span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      );
+    })
+  }
+  {
+    (b.machine || b.method) && (
+      <p class="meta">
+        {b.machine && (
+          <span>
+            {t.machine}: {tx(b.machine, locale)}
+          </span>
+        )}
+        {b.method && <a href={b.method}>{t.method}</a>}
+      </p>
+    )
+  }
+</figure>
+
+<style>
+  figure {
+    margin: 0;
+    padding: clamp(18px, 3vw, 28px);
+    display: grid;
+    gap: 22px;
+  }
+  figcaption {
+    display: grid;
+    gap: 6px;
+  }
+  figcaption h3 {
+    font-size: 20px;
+  }
+  figcaption p:not(.label) {
+    color: var(--text-2);
+  }
+  .group {
+    display: grid;
+    gap: 10px;
+  }
+  h4 {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    align-items: baseline;
+  }
+  h4 .label {
+    font-size: 11px;
+    font-weight: 400;
+  }
+  .val small {
+    font-size: 11px;
+  }
+  dl {
+    margin: 0;
+    display: grid;
+    gap: 6px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: minmax(110px, 180px) 1fr;
+    gap: 12px;
+    align-items: center;
+    font-size: 14px;
+  }
+  dt {
+    color: var(--text-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .own dt {
+    color: var(--text);
+    font-weight: 600;
+  }
+  dd {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .bar {
+    height: 14px;
+    width: var(--w);
+    border-radius: 3px;
+    background: var(--line-strong);
+    flex: none;
+    max-width: calc(100% - 90px);
+  }
+  .own .bar {
+    background: var(--accent);
+  }
+  .val {
+    font: 13px var(--mono);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .own .val {
+    color: var(--text);
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .meta a {
+    color: var(--accent-ink);
+  }
+  @media (max-width: 520px) {
+    .row {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+  }
+</style>

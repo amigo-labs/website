@@ -1,0 +1,91 @@
+---
+import type { Project } from '../lib/schema.ts';
+
+interface Props {
+  project: Project;
+}
+const { project: p } = Astro.props;
+const packages = p.catalog ?? [];
+const categories = [...new Set(packages.map((x) => x.category))];
+---
+
+<div class="catalog">
+  {
+    categories.map((cat) => (
+      <section>
+        <h3 class="label">{cat}</h3>
+        <ul>
+          {packages
+            .filter((x) => x.category === cat)
+            .map((x) => (
+              <li class="card">
+                <a href={x.npmUrl ?? x.sourceUrl ?? p.repoUrl}>
+                  <span class="name">{x.title}</span>
+                  {x.speedup && <span class="speed">{x.speedup}</span>}
+                </a>
+                <p>{x.description}</p>
+                <code>{x.npmUrl ? x.npmUrl.replace('https://www.npmjs.com/package/', '') : x.name}</code>
+              </li>
+            ))}
+        </ul>
+      </section>
+    ))
+  }
+</div>
+
+<style>
+  .catalog {
+    display: grid;
+    gap: 28px;
+  }
+  section {
+    display: grid;
+    gap: 12px;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+  }
+  li {
+    padding: 16px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+    position: relative;
+  }
+  li:hover {
+    border-color: color-mix(in oklab, var(--accent) 50%, var(--line));
+  }
+  a {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    text-decoration: none;
+  }
+  a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .name {
+    font-weight: 600;
+  }
+  .speed {
+    font: 600 12px var(--mono);
+    color: var(--accent-ink);
+    white-space: nowrap;
+  }
+  p {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  code {
+    font-size: 12px;
+    color: var(--muted);
+  }
+</style>

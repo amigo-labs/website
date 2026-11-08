@@ -1,0 +1,411 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Benchmark from '../../../components/Benchmark.astro';
+import Catalog from '../../../components/Catalog.astro';
+import Comparison from '../../../components/Comparison.astro';
+import Downloads from '../../../components/Downloads.astro';
+import Features from '../../../components/Features.astro';
+import ProjectIcon from '../../../components/ProjectIcon.astro';
+import ReleaseEntry from '../../../components/ReleaseEntry.astro';
+import { latestRelease, markdown, projects, resolveDownloads, versionOf } from '../../../lib/data.ts';
+import { formatDate, href, localeFromParam, localeParams, tx, ui } from '../../../lib/i18n.ts';
+
+export function getStaticPaths() {
+  return localeParams.flatMap((params) => projects().map((p) => ({ params: { ...params, slug: p.slug } })));
+}
+
+const locale = localeFromParam(Astro.params.locale);
+const t = ui(locale);
+const p = projects().find((x) => x.slug === Astro.params.slug)!;
+const release = latestRelease(p);
+const hasFiles = resolveDownloads(p).length > 0;
+const hasDownloadSection = p.downloads.files.length > 0 || p.downloads.install.length > 0;
+
+const nav = [
+  p.features.length > 0 && { id: 'features', label: t.features },
+  ...p.sections.map((s) => ({ id: s.id, label: tx(s.title, locale) })),
+  p.benchmarks.length > 0 && { id: 'measured', label: t.benchmarks },
+  p.comparisons.length > 0 && { id: 'compare', label: t.compare },
+  p.catalog && { id: 'packages', label: t.packages },
+  hasDownloadSection && { id: 'download', label: p.downloads.files.length > 0 ? t.download : t.install },
+  release && { id: 'releases', label: t.releaseNotes },
+  ...p.pages.map((pg) => ({ id: '', href: href(locale, `/${p.slug}/${pg.slug}/`), label: tx(pg.title, locale) })),
+].filter((x): x is { id: string; label: string; href?: string } => Boolean(x));
+---
+
+<Base
+  locale={locale}
+  title={`${p.name} — ${tx(p.tagline, locale)}`}
+  description={tx(p.summary, locale)}
+  accent={p.accent}
+  path={`/${p.slug}/`}
+>
+  <section class="hero">
+    <div class="wrap">
+      <div class="id">
+        <ProjectIcon project={p} size={56} />
+        <div>
+          <p class="name">{p.name}</p>
+          <span class:list={['pill', p.status]}>{t.status[p.status]}</span>
+        </div>
+      </div>
+      <h1>{tx(p.tagline, locale)}</h1>
+      <p class="summary">{tx(p.summary, locale)}</p>
+      <div class="actions">
+        {
+          hasFiles && (
+            <a class="btn primary" href="#download">
+              {t.download}
+              {release && p.releases.versioned && <small>v{versionOf(release)}</small>}
+            </a>
+          )
+        }
+        {
+          !hasFiles && p.catalog && (
+            <a class="btn primary" href="#packages">
+              {t.packages} <small>{p.catalog.length}</small>
+            </a>
+          )
+        }
+        {
+          p.launch && (
+            <a class:list={['btn', { primary: !hasFiles && !p.catalog }]} href={p.launch.url}>
+              {tx(p.launch.label, locale)} →
+            </a>
+          )
+        }
+        <a class="btn" href={p.repoUrl}>GitHub</a>
+        {p.links.map((l) => <a class="btn" href={l.url}>{tx(l.label, locale)}</a>)}
+      </div>
+      <dl class="meta">
+        {
+          release && p.releases.versioned && (
+            <div>
+              <dt class="label">{t.version}</dt>
+              <dd>
+                {versionOf(release)} · {formatDate(release.date, locale)}
+              </dd>
+            </div>
+          )
+        }
+        {
+          p.platforms.length > 0 && (
+            <div>
+              <dt class="label">{t.platformsLabel}</dt>
+              <dd>{p.platforms.map((x) => t.platforms[x]).join(' · ')}</dd>
+            </div>
+          )
+        }
+        <div>
+          <dt class="label">{t.license}</dt>
+          <dd>{p.license}</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  {
+    nav.length > 1 && (
+      <nav class="subnav" aria-label={t.overview}>
+        <div class="wrap">
+          {nav.map((n) => (
+            <a href={n.href ?? `#${n.id}`}>{n.label}</a>
+          ))}
+        </div>
+      </nav>
+    )
+  }
+
+  {
+    p.highlights.length > 0 && (
+      <section class="wrap" aria-label={t.overview}>
+        <div class="highlights">
+          {p.highlights.map((h) => (
+            <div>
+              <strong>{tx(h.value, locale)}</strong>
+              <span>{tx(h.label, locale)}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    p.screenshots.length > 0 && (
+      <section class="wrap shots">
+        {p.screenshots.map((s) => (
+          <img src={s.src} alt={tx(s.alt, locale)} loading="lazy" />
+        ))}
+      </section>
+    )
+  }
+
+  {
+    p.about && (
+      <section class="wrap about">
+        <div class="prose lead" set:html={markdown(tx(p.about, locale))} />
+      </section>
+    )
+  }
+
+  {
+    p.features.length > 0 && (
+      <section class="section" id="features">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="label">{p.name}</p>
+            <h2>{t.features}</h2>
+          </div>
+          <Features project={p} locale={locale} />
+        </div>
+      </section>
+    )
+  }
+
+  {
+    p.sections.map((s) => (
+      <section class="section" id={s.id}>
+        <div class="wrap">
+          <div class="section-head">
+            <h2>{tx(s.title, locale)}</h2>
+          </div>
+          <div class="prose" set:html={markdown(tx(s.body, locale))} />
+        </div>
+      </section>
+    ))
+  }
+
+  {
+    p.benchmarks.length > 0 && (
+      <section class="section" id="measured">
+        <div class="wrap stack">
+          <div class="section-head">
+            <h2>{t.benchmarks}</h2>
+          </div>
+          <div class="bench">
+            {p.benchmarks.map((b) => (
+              <Benchmark benchmark={b} locale={locale} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    p.comparisons.length > 0 && (
+      <section class="section" id="compare">
+        <div class="wrap stack">
+          <div class="section-head">
+            <h2>{t.compare}</h2>
+          </div>
+          {p.comparisons.map((c) => (
+            <Comparison comparison={c} locale={locale} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    p.catalog && (
+      <section class="section" id="packages">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>
+              {t.packages} <span class="count">{p.catalog.length}</span>
+            </h2>
+            <p>{t.packagesIntro}</p>
+          </div>
+          <Catalog project={p} />
+        </div>
+      </section>
+    )
+  }
+
+  {
+    hasDownloadSection && (
+      <section class="section" id="download">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>{p.downloads.files.length > 0 ? t.download : t.install}</h2>
+          </div>
+          <Downloads project={p} locale={locale} />
+        </div>
+      </section>
+    )
+  }
+
+  {
+    release && (
+      <section class="section" id="releases">
+        <div class="wrap narrow">
+          <div class="section-head row">
+            <h2>{t.releaseNotes}</h2>
+            <a href={href(locale, `/${p.slug}/releases/`)}>{t.olderReleases} →</a>
+          </div>
+          {p.releases.list.slice(0, p.releases.versioned ? 1 : 5).map((r) => (
+            <ReleaseEntry project={p} release={r} locale={locale} collapsed />
+          ))}
+        </div>
+      </section>
+    )
+  }
+</Base>
+
+<style>
+  .hero {
+    padding-block: clamp(48px, 9vw, 96px) clamp(32px, 5vw, 56px);
+    background: radial-gradient(ellipse 70% 90% at 85% 0%, var(--accent-soft), transparent 70%);
+  }
+  .hero .wrap {
+    display: grid;
+    gap: 20px;
+  }
+  .id {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .id > div {
+    display: grid;
+    gap: 4px;
+    justify-items: start;
+  }
+  .name {
+    font-weight: 650;
+    font-size: 18px;
+  }
+  h1 {
+    font-size: clamp(32px, 5.6vw, 58px);
+    letter-spacing: -0.035em;
+    max-width: 20ch;
+  }
+  .summary {
+    font-size: clamp(17px, 2vw, 20px);
+    color: var(--text-2);
+    max-width: 60ch;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 36px;
+    margin: 10px 0 0;
+  }
+  .meta div {
+    display: grid;
+    gap: 2px;
+  }
+  .meta dd {
+    margin: 0;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .subnav {
+    position: sticky;
+    top: 60px;
+    z-index: 10;
+    background: color-mix(in oklab, var(--bg) 90%, transparent);
+    backdrop-filter: blur(10px);
+    border-block: 1px solid var(--line);
+  }
+  .subnav .wrap {
+    display: flex;
+    gap: 22px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    height: 46px;
+    align-items: center;
+  }
+  .subnav a {
+    font-size: 14px;
+    color: var(--text-2);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .subnav a:hover {
+    color: var(--accent-ink);
+  }
+  .highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    margin-block: 40px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .highlights div {
+    background: var(--surface);
+    padding: 22px 24px;
+    display: grid;
+    gap: 4px;
+  }
+  .highlights strong {
+    font: 650 clamp(28px, 4vw, 38px) / 1.1 var(--font);
+    letter-spacing: -0.03em;
+    color: var(--accent-ink);
+  }
+  .highlights span {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .shots {
+    display: grid;
+    gap: 16px;
+    margin-block: 40px;
+  }
+  .shots img {
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+  }
+  .about {
+    padding-block: 48px 64px;
+  }
+  .lead {
+    font-size: 18px;
+  }
+  .stack {
+    display: grid;
+    gap: 48px;
+  }
+  .stack > :global(*),
+  .bench > :global(*) {
+    min-width: 0;
+  }
+  .stack .section-head {
+    margin-bottom: 0;
+  }
+  .bench {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+    gap: 16px;
+  }
+  .count {
+    font: 500 0.55em var(--mono);
+    color: var(--muted);
+    vertical-align: middle;
+  }
+  .narrow {
+    max-width: 860px;
+  }
+  .row {
+    display: flex;
+    max-width: none;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .row a {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+</style>

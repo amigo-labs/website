@@ -1,0 +1,84 @@
+---
+import { ui, type Locale } from '../lib/i18n.ts';
+
+interface Props {
+  label: string;
+  command: string;
+  note?: string | undefined;
+  locale: Locale;
+}
+const { label, command, note, locale } = Astro.props;
+const t = ui(locale);
+---
+
+<div class="cmd">
+  <span class="label">{label}</span>
+  <div class="line">
+    <pre><code>{command}</code></pre>
+    <button type="button" class="copy" data-copied={t.copied} aria-label={`${t.copy}: ${label}`}>{t.copy}</button>
+  </div>
+  {note && <p class="note">{note}</p>}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.cmd .copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const code = btn.parentElement?.querySelector('code')?.textContent ?? '';
+      try {
+        await navigator.clipboard.writeText(code);
+        const label = btn.textContent;
+        btn.textContent = btn.dataset.copied ?? label;
+        setTimeout(() => (btn.textContent = label), 1500);
+      } catch {
+        // Clipboard blocked: the command stays selectable.
+      }
+    });
+  });
+</script>
+
+<style>
+  .cmd {
+    display: grid;
+    gap: 6px;
+  }
+  .line {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--bg-raised);
+    overflow: hidden;
+  }
+  pre {
+    margin: 0;
+    padding: 11px 14px;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    font-size: 14px;
+    color: var(--text);
+  }
+  pre::before {
+    content: '$ ';
+    color: var(--muted);
+  }
+  .copy {
+    flex: none;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-2);
+    font: 500 13px var(--font);
+    padding: 0 14px;
+    min-width: 76px;
+    cursor: pointer;
+  }
+  .copy:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  .note {
+    font-size: 13px;
+    color: var(--muted);
+  }
+</style>

@@ -1,0 +1,61 @@
+---
+import Base from '../../../../layouts/Base.astro';
+import ReleaseEntry from '../../../../components/ReleaseEntry.astro';
+import ProjectIcon from '../../../../components/ProjectIcon.astro';
+import { projects } from '../../../../lib/data.ts';
+import { href, localeFromParam, localeParams, tx, ui } from '../../../../lib/i18n.ts';
+
+export function getStaticPaths() {
+  return localeParams.flatMap((params) => projects().map((p) => ({ params: { ...params, slug: p.slug } })));
+}
+
+const locale = localeFromParam(Astro.params.locale);
+const t = ui(locale);
+const p = projects().find((x) => x.slug === Astro.params.slug)!;
+---
+
+<Base
+  locale={locale}
+  title={`${p.name} — ${t.releaseNotes}`}
+  description={tx(p.summary, locale)}
+  accent={p.accent}
+  path={`/${p.slug}/releases/`}
+>
+  <div class="wrap page">
+    <header>
+      <a class="back" href={href(locale, `/${p.slug}/`)}><ProjectIcon project={p} size={28} /> {p.name}</a>
+      <h1>{t.releaseNotes}</h1>
+    </header>
+    <div>
+      {p.releases.list.length === 0 && <p class="empty">{t.noReleasesYet}</p>}
+      {p.releases.list.map((r) => <ReleaseEntry project={p} release={r} locale={locale} />)}
+    </div>
+  </div>
+</Base>
+
+<style>
+  .page {
+    display: grid;
+    gap: 40px;
+    padding-block: 56px 80px;
+    max-width: 860px;
+  }
+  header {
+    display: grid;
+    gap: 14px;
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--accent-ink);
+  }
+  h1 {
+    font-size: clamp(32px, 5vw, 48px);
+  }
+  .empty {
+    color: var(--text-2);
+  }
+</style>

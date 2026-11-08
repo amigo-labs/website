@@ -1,0 +1,38 @@
+---
+// A project's logo from its docs/site/, or its initial on its accent color.
+import type { Project } from '../lib/schema.ts';
+
+interface Props {
+  project: Project;
+  size?: number;
+}
+const { project, size = 48 } = Astro.props;
+const initial = project.name.replace(/^amigo-/, '').charAt(0).toUpperCase();
+---
+
+{
+  project.icon ? (
+    <img class="icon" src={project.icon} width={size} height={size} alt="" loading="lazy" />
+  ) : (
+    <span class="icon letter" style={`width:${size}px;height:${size}px;font-size:${size * 0.5}px`} aria-hidden="true">
+      {initial}
+    </span>
+  )
+}
+
+<style>
+  .icon {
+    border-radius: 22%;
+    flex: none;
+    object-fit: contain;
+  }
+  .letter {
+    display: grid;
+    place-items: center;
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+    color: var(--accent-ink);
+    font-family: var(--mono);
+    font-weight: 700;
+  }
+</style>

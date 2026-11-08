@@ -1,0 +1,126 @@
+---
+import { releaseNotesHtml, versionOf } from '../lib/data.ts';
+import { formatDate, href, ui, type Locale } from '../lib/i18n.ts';
+import type { Project, Release } from '../lib/schema.ts';
+
+interface Props {
+  project: Project;
+  release: Release;
+  locale: Locale;
+  /** Show the project name (combined feed). */
+  withProject?: boolean;
+  /** Cut long notes off and link the full release notes page. */
+  collapsed?: boolean;
+}
+const { project: p, release: r, locale, withProject = false, collapsed = false } = Astro.props;
+const t = ui(locale);
+const title = p.releases.versioned ? versionOf(r) : r.name;
+const notes = releaseNotesHtml(r);
+---
+
+<article class="release" id={r.tag} style={`--accent:${p.accent}`}>
+  <header>
+    <div class="title">
+      {withProject && <a class="project" href={href(locale, `/${p.slug}/`)}>{p.name}</a>}
+      <h3><a href={`#${encodeURIComponent(r.tag)}`}>{title}</a></h3>
+      {r.prerelease && <span class="pill beta">{t.prerelease}</span>}
+    </div>
+    <p class="meta">
+      <time datetime={r.date}>{formatDate(r.date, locale)}</time>
+      <a href={r.url}>{t.viewOnGitHub}</a>
+    </p>
+  </header>
+  {
+    notes.trim() &&
+      (collapsed && notes.length > 2500 ? (
+        <div class="clip">
+          <div class="prose" set:html={notes} />
+          <a class="btn more" href={href(locale, `/${p.slug}/releases/#${encodeURIComponent(r.tag)}`)}>
+            {t.more} →
+          </a>
+        </div>
+      ) : (
+        <div class="prose" set:html={notes} />
+      ))
+  }
+</article>
+
+<style>
+  .release {
+    display: grid;
+    gap: 14px;
+    padding-block: 28px;
+    border-top: 1px solid var(--line);
+  }
+  .release:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 16px;
+  }
+  .title {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .project {
+    font: 600 13px var(--mono);
+    color: var(--accent-ink);
+    text-decoration: none;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+  }
+  h3 {
+    font: 650 22px var(--mono);
+    letter-spacing: -0.01em;
+  }
+  h3 a {
+    text-decoration: none;
+  }
+  .meta {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .meta a {
+    color: var(--text-2);
+  }
+  .prose :global(h3),
+  .prose :global(h4) {
+    font: 600 12px var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .clip {
+    position: relative;
+    max-height: 420px;
+    overflow: hidden;
+  }
+  .clip::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 160px;
+    background: linear-gradient(transparent, var(--bg));
+    pointer-events: none;
+  }
+  .clip .more {
+    position: absolute;
+    left: 0;
+    bottom: 8px;
+    z-index: 1;
+  }
+  .prose :global(li a[href*='/commit/']) {
+    font: 12px var(--mono);
+    color: var(--muted);
+  }
+</style>
