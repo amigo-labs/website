@@ -6,6 +6,7 @@
 // through Node's type stripping, the Astro pages import it as usual.
 
 import { z } from 'zod';
+import { MONOGRAM, hasGlyphs } from './monogram.ts';
 
 export const LOCALES = ['en', 'de'] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -144,7 +145,13 @@ export const ProjectFile = z
     name: z.string(),
     status: Status,
     accent: Color,
-    /** Square logo (SVG or PNG). */
+    /** Two pixel letters for the project's mark, upper + lower case ("Pi"); default: the first two letters of the name. */
+    monogram: z
+      .string()
+      .regex(MONOGRAM, 'an upper-case letter followed by a lower-case one, e.g. "Pi"')
+      .refine(hasGlyphs, 'letters a–z only')
+      .optional(),
+    /** The app's own icon (SVG or PNG); the site shows the monogram instead. */
     icon: RepoPath.optional(),
     tagline: Text,
     summary: Text,
@@ -249,8 +256,10 @@ export interface Page {
   body: { en: string; de?: string | undefined };
 }
 
-export interface Project extends Omit<ProjectFile, 'benchmarks' | 'catalog' | 'icon' | 'screenshots' | 'pages'> {
+export interface Project extends Omit<ProjectFile, 'benchmarks' | 'catalog' | 'icon' | 'screenshots' | 'pages' | 'monogram'> {
   pages: Page[];
+  /** The monogram letters, defaulted. */
+  monogram: string;
   repo: string;
   repoUrl: string;
   /** Site URL of the icon, if any. */

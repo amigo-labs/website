@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import Logo from '../components/Logo.astro';
+import ProjectIcon from '../components/ProjectIcon.astro';
 import { href, switchLocale, ui, type Locale } from '../lib/i18n.ts';
 import { fetchedAt, formatDateTime, projects } from '../lib/data.ts';
 
@@ -22,6 +23,8 @@ const canonical = new URL(href(locale, path), site).href;
 const alt = (l: Locale) => new URL(href(l, path), site).href;
 const nav = projects();
 const stamp = fetchedAt();
+// Project pages use the project's monogram as favicon.
+const current = nav.find((p) => path.startsWith(`/${p.slug}/`));
 ---
 
 <!doctype html>
@@ -35,13 +38,24 @@ const stamp = fetchedAt();
     <link rel="alternate" hreflang="en" href={alt('en')} />
     <link rel="alternate" hreflang="de" href={alt('de')} />
     <link rel="alternate" hreflang="x-default" href={alt('en')} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {
+      current ? (
+        <link rel="icon" href={`/icons/${current.slug}.svg`} type="image/svg+xml" />
+      ) : (
+        <link rel="icon" href="/brand/favicon-32.png" type="image/png" sizes="32x32" />
+      )
+    }
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
+    <meta property="og:image" content={new URL('/brand/og.jpg', site).href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={locale === 'de' ? 'de_DE' : 'en_GB'} />
-    <meta name="theme-color" content="#0b0c0f" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#060f22" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)" />
     <link rel="alternate" type="application/atom+xml" title={`${t.siteName} — ${t.allReleases}`} href="/releases.xml" />
   </head>
@@ -61,7 +75,7 @@ const stamp = fetchedAt();
                 nav.map((p) => (
                   <li style={`--accent:${p.accent}`}>
                     <a href={href(locale, `/${p.slug}/`)} aria-current={path.startsWith(`/${p.slug}/`) ? 'page' : undefined}>
-                      <i aria-hidden="true" />
+                      <ProjectIcon project={p} size={22} />
                       {p.name}
                     </a>
                   </li>
@@ -209,12 +223,6 @@ const stamp = fetchedAt();
   .menu a[aria-current='page'] {
     background: var(--surface-2);
     color: var(--text);
-  }
-  .menu i {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-    background: var(--accent);
   }
   .lang {
     border: 1px solid var(--line-strong);

@@ -10,10 +10,12 @@
     "data": "node scripts/fetch-data.ts",
     "data:local": "node scripts/fetch-data.ts --local .. --gh",
     "dev": "astro dev",
-    "build": "node scripts/fetch-data.ts && astro build",
+    "build": "node scripts/fetch-data.ts --strict-on-main && astro build",
     "build:local": "node scripts/fetch-data.ts --local .. --gh && astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "monogram": "node scripts/monogram.ts",
+    "readme-header": "node scripts/readme-header.ts"
   },
   "dependencies": {
     "astro": "7.4.7",
@@ -26,6 +28,7 @@
     "@emnapi/core": "1.11.3",
     "@emnapi/runtime": "1.11.3",
     "@types/node": "^22.20.5",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.158.0"
   }
 }

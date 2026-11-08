@@ -1,63 +1,77 @@
 name: site
 
+# Pushes to main are deployed by Cloudflare Workers Builds (wrangler.toml).
+# This workflow checks pull requests and pushes, and redeploys when a
+# project changed without a push here: every hour and on a
+# `project-updated` dispatch (docs/project-data.md, "Faster updates").
 on:
   push:
     branches: [main]
   pull_request:
-  # Picks up project changes and releases without anyone touching this repo.
   schedule:
     - cron: '17 * * * *'
-  # Sent by a project's release workflow (docs/project-data.md, "Faster updates").
   repository_dispatch:
     types: [project-updated]
   workflow_dispatch:
 
 concurrency:
-  group: site-${{ github.ref }}
+  group: site-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  check:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Strict on main: a project that loses its docs/site/project.yml fails
-      # the deploy instead of silently disappearing. Pull requests only warn,
-      # so a project can be added here before its data is merged.
+      # instead of silently disappearing. Pull requests only warn, so a
+      # project can be added here before its data is merged.
       - name: Fetch project data
         run: node scripts/fetch-data.ts ${{ github.event_name != 'pull_request' && '--strict' || '' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - run: pnpm exec astro check
       - run: pnpm exec astro build
-      - uses: actions/upload-artifact@v7
-        with:
-          name: dist
-          path: dist
-          retention-days: 3
 
-  deploy:
-    needs: build
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+  redeploy:
+    if: github.event_name != 'push' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: production
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          name: dist
-          path: dist
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Check for Cloudflare credentials
+        id: creds
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is not set; skipping the scheduled redeploy (README, \"Deployment\")."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - if: steps.creds.outputs.ok == 'true'
+        run: pnpm install --frozen-lockfile && pnpm run build
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - if: steps.creds.outputs.ok == 'true'
+        run: pnpm exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
