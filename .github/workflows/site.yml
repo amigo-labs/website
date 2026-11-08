@@ -1,0 +1,60 @@
+name: site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Picks up project changes and releases without anyone touching this repo.
+  schedule:
+    - cron: '17 * * * *'
+  # Sent by a project's release workflow (docs/project-data.md, "Faster updates").
+  repository_dispatch:
+    types: [project-updated]
+  workflow_dispatch:
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Fetch project data
+        run: node scripts/fetch-data.ts --strict
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - run: pnpm exec astro check
+      - run: pnpm exec astro build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy

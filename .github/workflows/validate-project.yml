@@ -1,0 +1,40 @@
+# Reusable check for project repositories: validates the calling repository's
+# docs/site/ against this site's schema and warns about download entries the
+# latest release does not have. In a project repository:
+#
+#   jobs:
+#     site-data:
+#       uses: amigo-labs/website/.github/workflows/validate-project.yml@main
+#
+# (trigger it on pull requests that touch docs/site/**).
+name: validate-project
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: amigo-labs/website
+          path: website
+      - uses: actions/checkout@v7
+        with:
+          path: ${{ github.event.repository.name }}
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: website/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile
+        working-directory: website
+      - run: node scripts/fetch-data.ts --local .. --only "${{ github.repository }}"
+        working-directory: website
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
