@@ -150,6 +150,25 @@ groups:
       - { name: Windows Photos, value: 1116 }
 ```
 
+## App icons from the monogram
+
+Every project has a pixel monogram on the site: `monogram` (two letters,
+default: the first two of `name`) in its `accent` colour. Apps use the same
+mark as their icon, generated, never drawn by hand:
+
+```bash
+# in amigo-labs/website, next to the project checkout
+pnpm monogram amigo-labs/amigo-pincel --out ../amigo-pincel/assets/brand
+```
+
+This writes `assets/brand/` (commit it): `monogram.svg` and
+`monogram-small.svg`, PNGs from 16 to 1024 px and `favicon.ico`. Build the
+platform icons from it, e.g. `tauri icon assets/brand/icon-1024.png`.
+
+The reusable `validate-project.yml` workflow fails when `assets/brand/` no
+longer matches `project.yml`, so a new colour or monogram cannot leave stale
+app icons behind.
+
 ## Faster updates
 
 The hourly rebuild picks up every change. To show a release within a minute,

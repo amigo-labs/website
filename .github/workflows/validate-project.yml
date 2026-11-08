@@ -1,6 +1,7 @@
 # Reusable check for project repositories: validates the calling repository's
-# docs/site/ against this site's schema and warns about download entries the
-# latest release does not have. In a project repository:
+# docs/site/ against this site's schema, warns about download entries the
+# latest release does not have, and checks that assets/brand/ (the app icons
+# made from the pixel monogram) matches project.yml. In a project repository:
 #
 #   jobs:
 #     site-data:
@@ -38,3 +39,13 @@ jobs:
         working-directory: website
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      # App icons made from the monogram must match project.yml (accent, monogram).
+      - name: Check assets/brand/ against the monogram
+        working-directory: website
+        run: |
+          brand="../${{ github.event.repository.name }}/assets/brand"
+          if [ -f "$brand/monogram.json" ]; then
+            node scripts/monogram.ts "../${{ github.event.repository.name }}/docs/site/project.yml" --out "$brand" --check
+          else
+            echo "no assets/brand/monogram.json — skipped"
+          fi
