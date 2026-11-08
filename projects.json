@@ -3,7 +3,7 @@
   "repositories": [
     "amigo-labs/amigo-pincel",
     "amigo-labs/amigo-blinzel",
-    "amigo-labs/amigo-downloader",
+    "amigo-labs/amigo-krake",
     "amigo-labs/amigo-native",
     "amigo-labs/amigo-sofarr",
     "amigo-labs/amigo-trommel",
