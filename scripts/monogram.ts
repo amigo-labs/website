@@ -2,7 +2,7 @@
 // project's own docs/site/project.yml (`monogram`, `accent`), so app icons,
 // favicons and amigo-labs.dev always show the same mark.
 //
-//   node scripts/monogram.ts <owner/repo | path/to/project.yml> --out <dir> [--check]
+//   node scripts/monogram.ts <owner/repo | path/to/project.yml> --out <dir> [--tauri <dir>] [--check]
 //
 // <owner/repo> is read from ../<repo>/docs/site/project.yml when that
 // checkout exists, else from GitHub. --check writes nothing and exits 1 when
@@ -15,8 +15,14 @@
 //   monogram-small.svg    16×16 without frame (favicons, 16–64 px)
 //   icon-<n>.png          16, 32, 48, 64 (small) and 128, 256, 512, 1024 (full)
 //   favicon.ico           16, 32, 48
+//   icon.ico              16, 32, 48, 64, 256 (Windows app icon)
+//   icon.icns             16 to 1024, with @2x (macOS app icon)
+//   apple-touch-icon.png  180, on an opaque background (iOS shows transparency as black)
 //
-// Tauri apps: `tauri icon <dir>/icon-1024.png`.
+// --tauri <dir> also writes the icon set a Tauri app names in tauri.conf.json
+// (32x32.png, 128x128.png, 128x128@2x.png, icon.png, icon.ico, icon.icns),
+// e.g. --tauri ../app/src-tauri/icons. Don't use `tauri icon`: it resizes
+// with a smoothing filter and blurs the pixels.
 
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -37,8 +43,10 @@ const args = process.argv.slice(2);
 const source = args[0];
 const outIdx = args.indexOf('--out');
 const out = outIdx >= 0 ? args[outIdx + 1] : undefined;
+const tauriIdx = args.indexOf('--tauri');
+const tauriOut = tauriIdx >= 0 ? args[tauriIdx + 1] : undefined;
 const check = args.includes('--check');
-if (!source || source.startsWith('--') || !out) usage();
+if (!source || source.startsWith('--') || !out || (tauriIdx >= 0 && !tauriOut)) usage();
 
 async function readProjectFile(src: string): Promise<string> {
   if (src.endsWith('.yml') || src.endsWith('.yaml')) return readFile(src, 'utf8');
@@ -76,8 +84,8 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, body, crc]);
 }
 
-/** The grid scaled up by the largest whole factor that fits `size`, centred, as an RGBA PNG. */
-function png(grid: PixelGrid, size: number): Buffer {
+/** The grid scaled up by the largest whole factor that fits `size`, centred, as an RGBA PNG; `background` fills the rest. */
+function png(grid: PixelGrid, size: number, background?: string): Buffer {
   const scale = Math.floor(size / grid.size);
   if (scale < 1) throw new Error(`${size} px is smaller than the ${grid.size} px grid`);
   const offset = Math.floor((size - grid.size * scale) / 2);
@@ -89,7 +97,7 @@ function png(grid: PixelGrid, size: number): Buffer {
     for (let x = 0; x < size; x++) {
       const gx = Math.floor((x - offset) / scale);
       const inGrid = y >= offset && x >= offset && gx < grid.size && gy < grid.size;
-      const c = inGrid ? grid.pixels[gy * grid.size + gx] : null;
+      const c = (inGrid ? grid.pixels[gy * grid.size + gx] : null) ?? background;
       if (!c) continue;
       const i = row + 1 + x * 4;
       raw[i] = parseInt(c.slice(1, 3), 16);
@@ -132,6 +140,20 @@ function ico(images: { size: number; data: Buffer }[]): Buffer {
   return Buffer.concat([header, ...entries, ...images.map((i) => i.data)]);
 }
 
+/** An ICNS with PNG-encoded images (macOS 10.7 and later). */
+function icns(images: { type: string; data: Buffer }[]): Buffer {
+  const entries = images.map(({ type, data }) => {
+    const head = Buffer.alloc(8);
+    head.write(type, 0, 'ascii');
+    head.writeUInt32BE(8 + data.length, 4);
+    return Buffer.concat([head, data]);
+  });
+  const head = Buffer.alloc(8);
+  head.write('icns', 0, 'ascii');
+  head.writeUInt32BE(8 + entries.reduce((n, e) => n + e.length, 0), 4);
+  return Buffer.concat([head, ...entries]);
+}
+
 // ---- main ----
 
 const file = ProjectFile.parse(parseYaml(await readProjectFile(source)));
@@ -153,9 +175,41 @@ files.set(
 );
 files.set('monogram.svg', text(gridSvg(full, file.name) + '\n'));
 files.set('monogram-small.svg', text(gridSvg(small, file.name) + '\n'));
-for (const size of [16, 32, 48, 64]) files.set(`icon-${size}.png`, png(small, size));
-for (const size of [128, 256, 512, 1024]) files.set(`icon-${size}.png`, png(full, size));
-files.set('favicon.ico', ico([16, 32, 48].map((size) => ({ size, data: png(small, size) }))));
+/** 16–64 px from the small variant (no frame), 128 px and up from the full one. */
+const icon = (size: number) => png(size <= 64 ? small : full, size);
+for (const size of [16, 32, 48, 64, 128, 256, 512, 1024]) files.set(`icon-${size}.png`, icon(size));
+files.set('favicon.ico', ico([16, 32, 48].map((size) => ({ size, data: icon(size) }))));
+files.set('icon.ico', ico([16, 32, 48, 64, 256].map((size) => ({ size, data: icon(size) }))));
+files.set(
+  'icon.icns',
+  icns(
+    (
+      [
+        ['icp4', 16],
+        ['icp5', 32],
+        ['ic11', 32],
+        ['ic12', 64],
+        ['ic07', 128],
+        ['ic13', 256],
+        ['ic08', 256],
+        ['ic14', 512],
+        ['ic09', 512],
+        ['ic10', 1024],
+      ] as const
+    ).map(([type, size]) => ({ type, data: icon(size) })),
+  ),
+);
+// The frame's outer ring has cut corners; behind them the dark line colour, so iOS shows no black.
+files.set('apple-touch-icon.png', png(full, 180, '#080813'));
+
+const tauriFiles = new Map<string, Buffer>([
+  ['32x32.png', files.get('icon-32.png')!],
+  ['128x128.png', files.get('icon-128.png')!],
+  ['128x128@2x.png', files.get('icon-256.png')!],
+  ['icon.png', files.get('icon-512.png')!],
+  ['icon.ico', files.get('icon.ico')!],
+  ['icon.icns', files.get('icon.icns')!],
+]);
 
 const dir = resolve(out!);
 if (check) {
@@ -169,7 +223,7 @@ if (check) {
   if (stale.length) {
     console.error(
       `${out}: ${stale.join(', ')} ${stale.length === 1 ? 'does' : 'do'} not match docs/site/project.yml (${code}, ${file.accent}).\n` +
-        `Regenerate: node scripts/monogram.ts ${source} --out ${out}  (in amigo-labs/website), then rebuild the app icons.`,
+        `Regenerate: node scripts/monogram.ts ${source} --out ${out} [--tauri <icons dir>]  (in amigo-labs/website).`,
     );
     process.exit(1);
   }
@@ -178,4 +232,10 @@ if (check) {
   await mkdir(dir, { recursive: true });
   for (const [name, data] of files) await writeFile(join(dir, name), data);
   console.log(`${code} ${file.accent} → ${dir} (${files.size} files)`);
+  if (tauriOut) {
+    const tauriDir = resolve(tauriOut);
+    await mkdir(tauriDir, { recursive: true });
+    for (const [name, data] of tauriFiles) await writeFile(join(tauriDir, name), data);
+    console.log(`${code} ${file.accent} → ${tauriDir} (${tauriFiles.size} Tauri icons)`);
+  }
 }

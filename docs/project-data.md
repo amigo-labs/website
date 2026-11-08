@@ -158,12 +158,19 @@ mark as their icon, generated, never drawn by hand:
 
 ```bash
 # in amigo-labs/website, next to the project checkout
-pnpm monogram amigo-labs/amigo-pincel --out ../amigo-pincel/assets/brand
+pnpm monogram amigo-labs/amigo-pincel --out ../amigo-pincel/assets/brand \
+  --tauri ../amigo-pincel/src-tauri/icons
 ```
 
 This writes `assets/brand/` (commit it): `monogram.svg` and
-`monogram-small.svg`, PNGs from 16 to 1024 px and `favicon.ico`. Build the
-platform icons from it, e.g. `tauri icon assets/brand/icon-1024.png`.
+`monogram-small.svg`, PNGs from 16 to 1024 px, `favicon.ico`,
+`apple-touch-icon.png`, and the app icons `icon.ico` (Windows) and
+`icon.icns` (macOS). `--tauri` also writes the files a Tauri app lists in
+`tauri.conf.json` (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`,
+`icon.ico`, `icon.icns`). Don't use `tauri icon`: it resizes with a
+smoothing filter and blurs the pixels. Web apps copy the favicons and PNGs
+they need from `assets/brand/`; with a frame that reaches the edge, PWA
+manifest icons are `"purpose": "any"`, not `maskable`.
 
 The reusable `validate-project.yml` workflow fails when `assets/brand/` no
 longer matches `project.yml`, so a new colour or monogram cannot leave stale
