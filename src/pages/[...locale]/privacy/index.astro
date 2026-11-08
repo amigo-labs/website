@@ -1,0 +1,82 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { localeFromParam, localeParams, ui } from '../../../lib/i18n.ts';
+
+export function getStaticPaths() {
+  return localeParams.map((params) => ({ params }));
+}
+
+const locale = localeFromParam(Astro.params.locale);
+const t = ui(locale);
+---
+
+<Base locale={locale} title={`${t.privacy} — ${t.siteName}`} description={t.privacy} path="/privacy/">
+  <article class="wrap page">
+    <h1>{t.privacy}</h1>
+    {
+      locale === 'de' ? (
+        <div class="prose">
+          <p>
+            Diese Website ist eine statische Seite. Sie setzt keine Cookies, enthält keine Analyse- oder
+            Tracking-Werkzeuge und lädt keine Inhalte von Drittanbietern (keine externen Schriften, Skripte oder
+            Einbettungen).
+          </p>
+          <h2>Hosting</h2>
+          <p>
+            Die Seite wird über Cloudflare ausgeliefert. Beim Abruf verarbeitet Cloudflare technisch notwendige Daten
+            wie IP-Adresse, Zeitpunkt und angefragte Adresse, um die Seite auszuliefern und vor Angriffen zu schützen
+            (Art. 6 Abs. 1 lit. f DSGVO). Details:{' '}
+            <a href="https://www.cloudflare.com/privacypolicy/">Datenschutzerklärung von Cloudflare</a>.
+          </p>
+          <h2>Downloads und Links</h2>
+          <p>
+            Download-Dateien und Quellcode liegen auf GitHub. Ein Klick auf einen Download oder einen Link zu GitHub
+            ruft GitHub direkt auf; dafür gilt die{' '}
+            <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement">
+              Datenschutzerklärung von GitHub
+            </a>
+            .
+          </p>
+          <h2>Die Anwendungen</h2>
+          <p>Was die einzelnen Programme selbst verarbeiten, beschreibt das jeweilige Projekt in seinem Repository.</p>
+        </div>
+      ) : (
+        <div class="prose">
+          <p>
+            This website is a static site. It sets no cookies, contains no analytics or tracking, and loads nothing
+            from third parties (no external fonts, scripts or embeds).
+          </p>
+          <h2>Hosting</h2>
+          <p>
+            The site is served through Cloudflare. To deliver it and protect it against attacks, Cloudflare processes
+            technically necessary data such as the IP address, time and requested address (Art. 6(1)(f) GDPR). See{' '}
+            <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>.
+          </p>
+          <h2>Downloads and links</h2>
+          <p>
+            Download files and source code are hosted on GitHub. Following a download or a link to GitHub contacts
+            GitHub directly; the{' '}
+            <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">
+              GitHub privacy statement
+            </a>{' '}
+            applies.
+          </p>
+          <h2>The applications</h2>
+          <p>What each application itself processes is described by the project in its repository.</p>
+        </div>
+      )
+    }
+  </article>
+</Base>
+
+<style>
+  .page {
+    display: grid;
+    gap: 28px;
+    padding-block: 56px 80px;
+    max-width: 780px;
+  }
+  h1 {
+    font-size: clamp(32px, 5vw, 48px);
+  }
+</style>

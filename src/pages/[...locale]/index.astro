@@ -1,0 +1,175 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import { allReleases, isShipping, projects, versionOf } from '../../lib/data.ts';
+import { formatDate, href, localeFromParam, localeParams, ui } from '../../lib/i18n.ts';
+
+export function getStaticPaths() {
+  return localeParams.map((params) => ({ params }));
+}
+
+const locale = localeFromParam(Astro.params.locale);
+const t = ui(locale);
+const all = projects();
+const shipping = all.filter(isShipping);
+const upcoming = all.filter((p) => !isShipping(p));
+const recent = allReleases()
+  .filter((x) => !x.release.prerelease)
+  .slice(0, 6);
+---
+
+<Base locale={locale} title={`${t.siteName} — ${t.siteTagline}`} description={t.siteIntro} path="/">
+  <section class="hero">
+    <div class="wrap">
+      <p class="label">{t.siteName}</p>
+      <h1>{t.siteTagline}</h1>
+      <p class="intro">{t.siteIntro}</p>
+    </div>
+  </section>
+
+  <section class="wrap block" aria-labelledby="projects">
+    <h2 id="projects" class="label">{t.projects}</h2>
+    <ul class="cards">
+      {shipping.map((p) => <ProjectCard project={p} locale={locale} />)}
+    </ul>
+  </section>
+
+  {
+    upcoming.length > 0 && (
+      <section class="wrap block" aria-labelledby="upcoming">
+        <h2 id="upcoming" class="label">{t.inDevelopment}</h2>
+        <ul class="cards small">
+          {upcoming.map((p) => (
+            <ProjectCard project={p} locale={locale} compact />
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    recent.length > 0 && (
+      <section class="wrap block" aria-labelledby="releases">
+        <div class="row">
+          <h2 id="releases" class="label">{t.allReleases}</h2>
+          <a href={href(locale, '/releases/')}>{t.olderReleases} →</a>
+        </div>
+        <ol class="feed card">
+          {recent.map(({ project: p, release: r }) => (
+            <li style={`--accent:${p.accent}`}>
+              <a href={href(locale, `/${p.slug}/releases/#${encodeURIComponent(r.tag)}`)}>
+                <i aria-hidden="true" />
+                <span class="name">{p.name}</span>
+                <span class="ver">{p.releases.versioned ? versionOf(r) : r.name}</span>
+                <time datetime={r.date}>{formatDate(r.date, locale)}</time>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    )
+  }
+</Base>
+
+<style>
+  .hero {
+    position: relative;
+    padding-block: clamp(56px, 10vw, 112px) clamp(32px, 6vw, 56px);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 32px 32px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 32px 32px;
+    mask-image: linear-gradient(to bottom, black 40%, transparent);
+  }
+  .hero .wrap {
+    display: grid;
+    gap: 18px;
+  }
+  h1 {
+    font-size: clamp(34px, 6vw, 64px);
+    max-width: 18ch;
+    letter-spacing: -0.035em;
+  }
+  .intro {
+    font-size: clamp(17px, 2vw, 20px);
+    color: var(--text-2);
+    max-width: 58ch;
+  }
+  .block {
+    display: grid;
+    gap: 18px;
+    padding-bottom: clamp(40px, 6vw, 64px);
+  }
+  .cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+    gap: 16px;
+  }
+  .cards.small {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .row a {
+    font-size: 14px;
+    color: var(--text-2);
+  }
+  .feed {
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+  }
+  .feed a {
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+  }
+  .feed a:hover {
+    background: var(--surface-2);
+  }
+  .feed i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .name {
+    font-weight: 550;
+  }
+  .ver {
+    font: 14px var(--mono);
+    color: var(--text-2);
+  }
+  time {
+    font-size: 14px;
+    color: var(--muted);
+    min-width: 9.5em;
+    text-align: right;
+  }
+  @media (max-width: 560px) {
+    .feed a {
+      grid-template-columns: 10px 1fr auto;
+    }
+    time {
+      grid-column: 2 / -1;
+      text-align: left;
+      min-width: 0;
+    }
+  }
+</style>

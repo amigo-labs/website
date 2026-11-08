@@ -1,0 +1,30 @@
+---
+import Base from '../layouts/Base.astro';
+import { href, ui } from '../lib/i18n.ts';
+
+const t = ui('en');
+const d = ui('de');
+---
+
+<Base locale="en" title={`${t.notFound} — ${t.siteName}`} description={t.notFoundText} path="/404/">
+  <div class="wrap page">
+    <p class="label">404</p>
+    <h1>{t.notFound}</h1>
+    <p>{t.notFoundText} <a href={href('en', '/')}>{t.backHome}</a></p>
+    <p lang="de">{d.notFoundText} <a href={href('de', '/')}>{d.backHome}</a></p>
+  </div>
+</Base>
+
+<style>
+  .page {
+    display: grid;
+    gap: 16px;
+    padding-block: 96px;
+  }
+  h1 {
+    font-size: clamp(32px, 5vw, 48px);
+  }
+  p:not(.label) {
+    color: var(--text-2);
+  }
+</style>

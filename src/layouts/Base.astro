@@ -1,0 +1,276 @@
+---
+import '../styles/global.css';
+import Logo from '../components/Logo.astro';
+import { href, switchLocale, ui, type Locale } from '../lib/i18n.ts';
+import { fetchedAt, formatDateTime, projects } from '../lib/data.ts';
+
+interface Props {
+  locale: Locale;
+  title: string;
+  description: string;
+  /** Project accent for this page; the brand color otherwise. */
+  accent?: string | undefined;
+  /** Path of the page without language prefix, e.g. /pincel/. */
+  path: string;
+}
+
+const { locale, title, description, accent, path } = Astro.props;
+const t = ui(locale);
+const other: Locale = locale === 'en' ? 'de' : 'en';
+const site = Astro.site!;
+const canonical = new URL(href(locale, path), site).href;
+const alt = (l: Locale) => new URL(href(l, path), site).href;
+const nav = projects();
+const stamp = fetchedAt();
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="en" href={alt('en')} />
+    <link rel="alternate" hreflang="de" href={alt('de')} />
+    <link rel="alternate" hreflang="x-default" href={alt('en')} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={locale === 'de' ? 'de_DE' : 'en_GB'} />
+    <meta name="theme-color" content="#0b0c0f" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)" />
+    <link rel="alternate" type="application/atom+xml" title={`${t.siteName} — ${t.allReleases}`} href="/releases.xml" />
+  </head>
+  <body style={accent ? `--accent:${accent}` : undefined}>
+    <a class="skip" href="#main">{t.skip}</a>
+    <header class="top">
+      <div class="wrap bar">
+        <a class="home" href={href(locale, '/')} aria-label={t.siteName}>
+          <Logo />
+          <span>{t.siteName}</span>
+        </a>
+        <nav aria-label={t.projects}>
+          <details class="menu">
+            <summary>{t.projects}</summary>
+            <ul>
+              {
+                nav.map((p) => (
+                  <li style={`--accent:${p.accent}`}>
+                    <a href={href(locale, `/${p.slug}/`)} aria-current={path.startsWith(`/${p.slug}/`) ? 'page' : undefined}>
+                      <i aria-hidden="true" />
+                      {p.name}
+                    </a>
+                  </li>
+                ))
+              }
+            </ul>
+          </details>
+          <a href={href(locale, '/releases/')} aria-current={path === '/releases/' ? 'page' : undefined}>{t.allReleases}</a>
+          <a class="lang" href={switchLocale(href(locale, path), other)} hreflang={other} lang={other}>
+            <span class="label">{other.toUpperCase()}</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="foot">
+      <div class="wrap cols">
+        <div class="about">
+          <a class="home" href={href(locale, '/')}><Logo size={22} /><span>{t.siteName}</span></a>
+          <p>{t.siteTagline}</p>
+        </div>
+        <ul>
+          {nav.map((p) => <li><a href={href(locale, `/${p.slug}/`)}>{p.name}</a></li>)}
+        </ul>
+        <ul>
+          <li><a href={href(locale, '/releases/')}>{t.allReleases}</a></li>
+          <li><a href="https://github.com/amigo-labs">GitHub</a></li>
+          <li><a href={href(locale, '/privacy/')}>{t.privacy}</a></li>
+          <li>
+            <a href={switchLocale(href(locale, path), other)} hreflang={other} lang={other}>
+              {other === 'de' ? 'Deutsch' : 'English'}
+            </a>
+          </li>
+        </ul>
+      </div>
+      {stamp && <p class="wrap stamp label">{t.updated} {formatDateTime(stamp, locale)}</p>}
+    </footer>
+    <script is:inline>
+      // Close the projects menu on outside click or Escape.
+      (() => {
+        const menu = document.querySelector('header details.menu');
+        if (!menu) return;
+        document.addEventListener('click', (e) => {
+          if (menu.open && !menu.contains(e.target)) menu.open = false;
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && menu.open) {
+            menu.open = false;
+            menu.querySelector('summary').focus();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+<style>
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in oklab, var(--bg) 82%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: 60px;
+  }
+  .home {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: clamp(10px, 3vw, 24px);
+    font-size: 15px;
+  }
+  nav > a,
+  summary {
+    color: var(--text-2);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  nav > a:hover,
+  summary:hover,
+  nav a[aria-current='page'] {
+    color: var(--text);
+  }
+  .menu {
+    position: relative;
+  }
+  summary {
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-2px) rotate(45deg);
+  }
+  .menu ul {
+    position: absolute;
+    right: -12px;
+    top: calc(100% + 12px);
+    min-width: 220px;
+    margin: 0;
+    padding: 6px;
+    list-style: none;
+    background: var(--bg-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: 0 16px 40px rgb(0 0 0 / 0.35);
+  }
+  .menu a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--text-2);
+  }
+  .menu a:hover,
+  .menu a[aria-current='page'] {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .menu i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+  .lang {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+  }
+  .lang .label {
+    color: inherit;
+  }
+  .foot {
+    border-top: 1px solid var(--line);
+    padding-block: 48px 32px;
+    margin-top: 0;
+    color: var(--text-2);
+    font-size: 15px;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 32px;
+  }
+  .about {
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    max-width: 36ch;
+  }
+  .foot ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+    align-content: start;
+  }
+  .foot ul a {
+    text-decoration: none;
+  }
+  .foot ul a:hover {
+    color: var(--text);
+  }
+  .stamp {
+    margin-top: 32px;
+  }
+  @media (max-width: 640px) {
+    .cols {
+      grid-template-columns: 1fr 1fr;
+    }
+    .about {
+      grid-column: 1 / -1;
+    }
+    .home span {
+      display: none;
+    }
+    .foot .home span {
+      display: inline;
+    }
+  }
+</style>

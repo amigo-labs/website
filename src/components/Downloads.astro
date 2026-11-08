@@ -1,0 +1,241 @@
+---
+import { checksumAsset, latestRelease, markdown, resolveDownloads, versionOf } from '../lib/data.ts';
+import { formatDate, formatSize, href, tx, ui, type Locale } from '../lib/i18n.ts';
+import type { Project } from '../lib/schema.ts';
+import CopyCommand from './CopyCommand.astro';
+
+interface Props {
+  project: Project;
+  locale: Locale;
+}
+const { project: p, locale } = Astro.props;
+const t = ui(locale);
+const release = latestRelease(p);
+const files = resolveDownloads(p);
+const sums = checksumAsset(p);
+const oses = (['windows', 'macos', 'linux'] as const)
+  .map((os) => ({ os, files: files.filter((f) => f.os === os) }))
+  .filter((g) => g.files.length > 0);
+const install = p.downloads.install.filter((i) => release || !i.requiresRelease);
+const expectsFiles = p.downloads.files.length > 0 || p.downloads.install.some((i) => i.requiresRelease);
+const guide = p.downloads.guide;
+const guideHtml = (text: typeof guide.all) => (text ? markdown(tx(text, locale)) : '');
+---
+
+<div class="downloads">
+  {
+    release && p.releases.versioned && (
+      <p class="version">
+        <span class="label">{t.latestRelease}</span>
+        <strong>{versionOf(release)}</strong>
+        <span>· {formatDate(release.date, locale)}</span>
+        <a href={href(locale, `/${p.slug}/releases/`)}>{t.releaseNotes}</a>
+      </p>
+    )
+  }
+
+  {
+    oses.length > 0 && (
+      <div class="oses">
+        {oses.map((g) => (
+          <section class="card os" data-os={g.os}>
+            <h3>
+              {t.platforms[g.os]}
+              <span class="pill plain mine">{t.forYourSystem}</span>
+            </h3>
+            <ul>
+              {g.files.map((f) => (
+                <li>
+                  <a class="file" href={f.file.url} download>
+                    <span class="name">
+                      {tx(f.label, locale)}
+                      {f.arch && <span class="arch">{f.arch}</span>}
+                    </span>
+                    <span class="size">{formatSize(f.file.size, locale)}</span>
+                  </a>
+                  {f.note && <p class="note">{tx(f.note, locale)}</p>}
+                </li>
+              ))}
+            </ul>
+            {guide[g.os] && (
+              <details class="guide">
+                <summary>{t.installNotes}</summary>
+                <div class="prose" set:html={guideHtml(guide[g.os])} />
+              </details>
+            )}
+          </section>
+        ))}
+      </div>
+    )
+  }
+
+  {expectsFiles && !release && <p class="empty card">{t.noRelease} <a href={p.repoUrl}>GitHub</a></p>}
+
+  {
+    install.length > 0 && (
+      <div class="install">
+        <h3 class="label">{t.install}</h3>
+        {install.map((i) => (
+          <CopyCommand label={tx(i.label, locale)} command={i.command} note={tx(i.note, locale)} locale={locale} />
+        ))}
+      </div>
+    )
+  }
+
+  {guide.all && release && <div class="prose all" set:html={guideHtml(guide.all)} />}
+
+  {
+    sums && (
+      <p class="sums">
+        <a href={sums.url}>{t.checksums} ({sums.name})</a> — {t.checksumsHint}
+      </p>
+    )
+  }
+</div>
+
+<script is:inline>
+  // Put the visitor's operating system first and mark it.
+  (() => {
+    const ua = navigator.userAgent;
+    const os = /Windows/.test(ua) ? 'windows' : /Mac OS X|Macintosh/.test(ua) && !/iPhone|iPad/.test(ua) ? 'macos' : /Linux|X11/.test(ua) && !/Android/.test(ua) ? 'linux' : null;
+    if (!os) return;
+    document.querySelectorAll('.oses').forEach((list) => {
+      const mine = list.querySelector(`[data-os="${os}"]`);
+      if (mine) {
+        mine.classList.add('is-mine');
+        list.prepend(mine);
+      }
+    });
+  })();
+</script>
+
+<style>
+  .downloads {
+    display: grid;
+    gap: 24px;
+  }
+  .version {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+    color: var(--text-2);
+  }
+  .version strong {
+    color: var(--text);
+    font: 600 18px var(--mono);
+  }
+  .version a {
+    color: var(--accent-ink);
+    margin-left: 6px;
+  }
+  .oses {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .os {
+    padding: 20px;
+    display: grid;
+    gap: 14px;
+    align-content: start;
+  }
+  .os h3 {
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .mine {
+    display: none;
+    color: var(--accent-ink);
+    border-color: color-mix(in oklab, var(--accent) 50%, transparent);
+  }
+  .is-mine {
+    border-color: color-mix(in oklab, var(--accent) 60%, var(--line));
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent);
+  }
+  .is-mine .mine {
+    display: inline-flex;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+  }
+  .file {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 550;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .file:hover {
+    border-color: var(--accent-ink);
+    background: var(--accent-soft);
+  }
+  .is-mine li:first-child .file {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0b0c0f;
+  }
+  .is-mine li:first-child .file .arch,
+  .is-mine li:first-child .file .size {
+    color: #0b0c0f;
+    opacity: 0.7;
+  }
+  .name {
+    display: inline-flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .arch,
+  .size {
+    font: 12px var(--mono);
+    color: var(--muted);
+  }
+  .note {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .install {
+    display: grid;
+    gap: 10px;
+  }
+  .empty {
+    padding: 20px;
+    color: var(--text-2);
+  }
+  .empty a,
+  .sums a {
+    color: var(--accent-ink);
+  }
+  .sums {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .guide {
+    font-size: 14px;
+  }
+  .guide summary {
+    cursor: pointer;
+    color: var(--text-2);
+  }
+  .guide .prose {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+  .all {
+    font-size: 15px;
+  }
+</style>

@@ -1,0 +1,95 @@
+---
+// A project's subpage: a Markdown file from its docs/site/ (project.yml `pages`).
+import Base from '../../../../layouts/Base.astro';
+import ProjectIcon from '../../../../components/ProjectIcon.astro';
+import { markdown, projects } from '../../../../lib/data.ts';
+import { href, localeFromParam, localeParams, tx } from '../../../../lib/i18n.ts';
+
+export function getStaticPaths() {
+  return localeParams.flatMap((params) =>
+    projects().flatMap((p) => p.pages.map((pg) => ({ params: { ...params, slug: p.slug, page: pg.slug } }))),
+  );
+}
+
+const locale = localeFromParam(Astro.params.locale);
+const p = projects().find((x) => x.slug === Astro.params.slug)!;
+const page = p.pages.find((x) => x.slug === Astro.params.page)!;
+const body = (locale === 'de' ? page.body.de : undefined) ?? page.body.en;
+---
+
+<Base
+  locale={locale}
+  title={`${tx(page.title, locale)} — ${p.name}`}
+  description={tx(page.summary ?? p.summary, locale)}
+  accent={p.accent}
+  path={`/${p.slug}/${page.slug}/`}
+>
+  <article class="wrap page">
+    <header>
+      <a class="back" href={href(locale, `/${p.slug}/`)}><ProjectIcon project={p} size={28} /> {p.name}</a>
+      <h1>{tx(page.title, locale)}</h1>
+      {page.summary && <p class="summary">{tx(page.summary, locale)}</p>}
+    </header>
+    <div class="prose doc" set:html={markdown(body)} />
+  </article>
+</Base>
+
+<style>
+  .page {
+    display: grid;
+    gap: 36px;
+    padding-block: 56px 80px;
+    max-width: 860px;
+  }
+  header {
+    display: grid;
+    gap: 14px;
+  }
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--accent-ink);
+  }
+  h1 {
+    font-size: clamp(32px, 5vw, 48px);
+  }
+  .summary {
+    font-size: 18px;
+    color: var(--text-2);
+  }
+  .doc {
+    font-size: 16px;
+  }
+  .doc :global(h2) {
+    font-size: 24px;
+    margin-top: 1.8em;
+  }
+  .doc :global(h3) {
+    font-size: 18px;
+  }
+  .doc :global(pre) {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    overflow-x: auto;
+  }
+  .doc :global(pre code) {
+    background: none;
+    padding: 0;
+  }
+  .doc :global(table) {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14px;
+  }
+  .doc :global(th),
+  .doc :global(td) {
+    border-bottom: 1px solid var(--line);
+    padding: 8px 10px;
+    text-align: left;
+  }
+</style>
