@@ -159,6 +159,22 @@ export function monogramSvg(code: string, accent: string, title?: string, varian
   return gridSvg(monogramPixels(code, accent, variant), title);
 }
 
+/**
+ * `text` in the pixel font as a grid `width`×7 (no shadow): one column of space
+ * between letters, three for a space. Letters without a glyph are skipped.
+ */
+export function textPixels(text: string, color: string): { width: number; height: number; pixels: (string | null)[] } {
+  const parts = [...text].map((ch) => (ch === ' ' ? null : FONT[ch])).filter((g) => g !== undefined);
+  const width = parts.reduce((w, g, i) => w + (g ? g[0]!.length : 3) + (i ? 1 : 0), 0);
+  const pixels: (string | null)[] = new Array(width * 7).fill(null);
+  let left = 0;
+  for (const g of parts) {
+    if (g) g.forEach((row, r) => [...row].forEach((ch, c) => ch === '#' && (pixels[r * width + left + c] = color)));
+    left += (g ? g[0]!.length : 3) + 1;
+  }
+  return { width, height: 7, pixels };
+}
+
 /** Whether every letter of `code` has a glyph. */
 export function hasGlyphs(code: string): boolean {
   return [...code].every((ch) => ch in FONT);

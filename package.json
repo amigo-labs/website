@@ -14,7 +14,8 @@
     "build:local": "node scripts/fetch-data.ts --local .. --gh && astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "monogram": "node scripts/monogram.ts"
+    "monogram": "node scripts/monogram.ts",
+    "readme-header": "node scripts/readme-header.ts"
   },
   "dependencies": {
     "astro": "7.4.7",

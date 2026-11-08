@@ -18,6 +18,7 @@
 //   icon.ico              16, 32, 48, 64, 256 (Windows app icon)
 //   icon.icns             16 to 1024, with @2x (macOS app icon)
 //   apple-touch-icon.png  180, on an opaque background (iOS shows transparency as black)
+//   social-preview.png    1280×640, for the repository's Settings → Social preview
 //
 // --tauri <dir> also writes the icon set a Tauri app names in tauri.conf.json
 // (32x32.png, 128x128.png, 128x128@2x.png, icon.png, icon.ico, icon.icns),
@@ -28,11 +29,8 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { deflateSync } from 'node:zlib';
-import { parse as parseYaml } from 'yaml';
-import { defaultMonogram, gridSvg, monogramPixels, type PixelGrid } from '../src/lib/monogram.ts';
-import { ProjectFile } from '../src/lib/schema.ts';
-
-const root = resolve(import.meta.dirname, '..');
+import { readProjectFile } from './project-file.ts';
+import { defaultMonogram, gridSvg, monogramPixels, textPixels, type PixelGrid } from '../src/lib/monogram.ts';
 
 function usage(): never {
   console.error('usage: node scripts/monogram.ts <owner/repo | path/to/project.yml> --out <dir> [--check]');
@@ -47,19 +45,6 @@ const tauriIdx = args.indexOf('--tauri');
 const tauriOut = tauriIdx >= 0 ? args[tauriIdx + 1] : undefined;
 const check = args.includes('--check');
 if (!source || source.startsWith('--') || !out || (tauriIdx >= 0 && !tauriOut)) usage();
-
-async function readProjectFile(src: string): Promise<string> {
-  if (src.endsWith('.yml') || src.endsWith('.yaml')) return readFile(src, 'utf8');
-  const [, repo] = src.split('/');
-  if (!repo) usage();
-  const local = join(root, '..', repo, 'docs/site/project.yml');
-  if (existsSync(local)) return readFile(local, 'utf8');
-  const res = await fetch(`https://raw.githubusercontent.com/${src}/HEAD/docs/site/project.yml`, {
-    headers: { 'user-agent': 'amigo-labs-website' },
-  });
-  if (!res.ok) throw new Error(`${src}: docs/site/project.yml: HTTP ${res.status}`);
-  return res.text();
-}
 
 // ---- PNG / ICO without dependencies ----
 
@@ -84,20 +69,14 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([len, body, crc]);
 }
 
-/** The grid scaled up by the largest whole factor that fits `size`, centred, as an RGBA PNG; `background` fills the rest. */
-function png(grid: PixelGrid, size: number, background?: string): Buffer {
-  const scale = Math.floor(size / grid.size);
-  if (scale < 1) throw new Error(`${size} px is smaller than the ${grid.size} px grid`);
-  const offset = Math.floor((size - grid.size * scale) / 2);
-  const raw = Buffer.alloc(size * (size * 4 + 1));
-  for (let y = 0; y < size; y++) {
-    const row = y * (size * 4 + 1);
+/** An RGBA PNG of `width`×`height`; `color(x, y)` is '#rrggbb' or null for transparent. */
+function encodePng(width: number, height: number, color: (x: number, y: number) => string | null | undefined): Buffer {
+  const raw = Buffer.alloc(height * (width * 4 + 1));
+  for (let y = 0; y < height; y++) {
+    const row = y * (width * 4 + 1);
     raw[row] = 0; // filter: none
-    const gy = Math.floor((y - offset) / scale);
-    for (let x = 0; x < size; x++) {
-      const gx = Math.floor((x - offset) / scale);
-      const inGrid = y >= offset && x >= offset && gx < grid.size && gy < grid.size;
-      const c = (inGrid ? grid.pixels[gy * grid.size + gx] : null) ?? background;
+    for (let x = 0; x < width; x++) {
+      const c = color(x, y);
       if (!c) continue;
       const i = row + 1 + x * 4;
       raw[i] = parseInt(c.slice(1, 3), 16);
@@ -107,8 +86,8 @@ function png(grid: PixelGrid, size: number, background?: string): Buffer {
     }
   }
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
   ihdr[8] = 8; // bit depth
   ihdr[9] = 6; // RGBA
   return Buffer.concat([
@@ -117,6 +96,56 @@ function png(grid: PixelGrid, size: number, background?: string): Buffer {
     chunk('IDAT', deflateSync(raw, { level: 9 })),
     chunk('IEND', Buffer.alloc(0)),
   ]);
+}
+
+/** The grid scaled up by the largest whole factor that fits `size`, centred, as an RGBA PNG; `background` fills the rest. */
+function png(grid: PixelGrid, size: number, background?: string): Buffer {
+  const scale = Math.floor(size / grid.size);
+  if (scale < 1) throw new Error(`${size} px is smaller than the ${grid.size} px grid`);
+  const offset = Math.floor((size - grid.size * scale) / 2);
+  return encodePng(size, size, (x, y) => {
+    const gx = Math.floor((x - offset) / scale);
+    const gy = Math.floor((y - offset) / scale);
+    const inGrid = x >= offset && y >= offset && gx < grid.size && gy < grid.size;
+    return (inGrid ? grid.pixels[gy * grid.size + gx] : null) ?? background;
+  });
+}
+
+/**
+ * The GitHub social preview (1280×640): the monogram, the project name in the
+ * pixel font in its accent colour, and "AMIGO LABS" in signal yellow, on the
+ * site's night blue.
+ */
+function socialPreview(grid: PixelGrid, name: string, accent: string): Buffer {
+  const W = 1280;
+  const H = 640;
+  const layers: { x: number; y: number; scale: number; w: number; h: number; pixels: (string | null)[] }[] = [];
+  const iconScale = 16; // 24 px grid → 384 px
+  const iconY = (H - grid.size * iconScale) / 2;
+  layers.push({ x: 112, y: iconY, scale: iconScale, w: grid.size, h: grid.size, pixels: grid.pixels });
+  const textX = 112 + grid.size * iconScale + 80;
+  const label = name.replace(/^amigo-/i, '');
+  const title = textPixels(label, accent);
+  const titleScale = Math.max(4, Math.min(14, Math.floor((W - textX - 80) / title.width)));
+  const shadow = textPixels(label, '#000000');
+  const sub = textPixels('AMIGO LABS', '#f5e554');
+  const subScale = 5;
+  const gap = 40;
+  const blockH = 7 * titleScale + gap + 7 * subScale;
+  const titleY = Math.round((H - blockH) / 2);
+  layers.push({ x: textX + titleScale, y: titleY + titleScale, scale: titleScale, w: shadow.width, h: 7, pixels: shadow.pixels.map((c) => (c ? '#02060f' : null)) });
+  layers.push({ x: textX, y: titleY, scale: titleScale, w: title.width, h: 7, pixels: title.pixels });
+  layers.push({ x: textX, y: titleY + 7 * titleScale + gap, scale: subScale, w: sub.width, h: 7, pixels: sub.pixels });
+  return encodePng(W, H, (x, y) => {
+    let c: string | null = '#060f22';
+    for (const l of layers) {
+      const gx = Math.floor((x - l.x) / l.scale);
+      const gy = Math.floor((y - l.y) / l.scale);
+      if (x < l.x || y < l.y || gx >= l.w || gy >= l.h) continue;
+      c = l.pixels[gy * l.w + gx] ?? c;
+    }
+    return c;
+  });
 }
 
 /** An ICO with PNG-encoded images (Windows Vista and later). */
@@ -156,7 +185,7 @@ function icns(images: { type: string; data: Buffer }[]): Buffer {
 
 // ---- main ----
 
-const file = ProjectFile.parse(parseYaml(await readProjectFile(source)));
+const file = await readProjectFile(source!);
 const code = file.monogram ?? defaultMonogram(file.name);
 const full = monogramPixels(code, file.accent, 'full');
 const small = monogramPixels(code, file.accent, 'small');
@@ -201,6 +230,7 @@ files.set(
 );
 // The frame's outer ring has cut corners; behind them the dark line colour, so iOS shows no black.
 files.set('apple-touch-icon.png', png(full, 180, '#080813'));
+files.set('social-preview.png', socialPreview(full, file.name, file.accent));
 
 const tauriFiles = new Map<string, Buffer>([
   ['32x32.png', files.get('icon-32.png')!],

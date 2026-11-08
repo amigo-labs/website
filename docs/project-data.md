@@ -164,8 +164,8 @@ pnpm monogram amigo-labs/amigo-pincel --out ../amigo-pincel/assets/brand \
 
 This writes `assets/brand/` (commit it): `monogram.svg` and
 `monogram-small.svg`, PNGs from 16 to 1024 px, `favicon.ico`,
-`apple-touch-icon.png`, and the app icons `icon.ico` (Windows) and
-`icon.icns` (macOS). `--tauri` also writes the files a Tauri app lists in
+`apple-touch-icon.png`, the app icons `icon.ico` (Windows) and
+`icon.icns` (macOS), and `social-preview.png` (see below). `--tauri` also writes the files a Tauri app lists in
 `tauri.conf.json` (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.png`,
 `icon.ico`, `icon.icns`). Don't use `tauri icon`: it resizes with a
 smoothing filter and blurs the pixels. Web apps copy the favicons and PNGs
@@ -175,6 +175,34 @@ manifest icons are `"purpose": "any"`, not `maskable`.
 The reusable `validate-project.yml` workflow fails when `assets/brand/` no
 longer matches `project.yml`, so a new colour or monogram cannot leave stale
 app icons behind.
+
+## README header and badges
+
+Every project README starts with the same header: the monogram, the name and
+one row of badges.
+
+```bash
+pnpm readme-header amigo-labs/amigo-pincel --write ../amigo-pincel/README.md
+```
+
+The block sits between `<!-- amigo-labs header … -->` markers; rerunning the
+command replaces it. The badges are shields.io endpoint badges that read
+`https://amigo-labs.dev/badges/<slug>/<kind>.json`, built from the project
+data on every deploy, so the README never changes when the project does:
+
+| Badge | Source |
+| --- | --- |
+| Status | `status` in `project.yml` |
+| Release | the latest release (a catalog project: its package count) |
+| CI | `.github/workflows/ci.yml` (only when the repository has it) |
+| License | `license` in `project.yml` |
+| amigo-labs.dev | link to the project page, in its accent colour |
+
+## GitHub social preview
+
+GitHub shows `assets/brand/social-preview.png` (1280×640) when the
+repository is linked anywhere. It cannot be set through the API: upload it
+once under the repository's Settings → General → Social preview.
 
 ## Faster updates
 
