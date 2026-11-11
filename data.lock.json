@@ -3,15 +3,15 @@
   "projects": {
     "pincel": {
       "release": "v1.10.1",
-      "hash": "c44750f91087ab2f"
+      "hash": "515c71e16c8d8019"
     },
     "blinzel": {
-      "release": "v1.7.0",
-      "hash": "74f252950bda0933"
+      "release": "v1.7.1",
+      "hash": "40f9da1dd4d30c6d"
     },
     "krake": {
-      "release": null,
-      "hash": "555fd1ee52aded84"
+      "release": "krake-v0.1.0",
+      "hash": "b5bd579eedcfed6c"
     },
     "native": {
       "release": "typst@0.4.0",
