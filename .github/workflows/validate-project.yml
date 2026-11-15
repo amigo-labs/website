@@ -1,17 +1,31 @@
 # Reusable check for project repositories: validates the calling repository's
 # docs/site/ against this site's schema, warns about download entries the
 # latest release does not have, and checks that assets/brand/ (the app icons
-# made from the pixel monogram) matches project.yml. In a project repository:
+# made from the pixel monogram) matches project.yml, and that the app theme
+# (scripts/theme.ts), where the project names its folder, is current. In a
+# project repository:
 #
 #   jobs:
 #     site-data:
 #       uses: amigo-labs/website/.github/workflows/validate-project.yml@main
+#       with:
+#         theme-dir: ui/src/theme        # optional: tokens.css, components.css
+#         theme-rust: crates/app/src/theme.rs   # optional: the Rust constants
 #
-# (trigger it on pull requests that touch docs/site/**).
+# (trigger it on pull requests that touch docs/site/** or the theme files).
 name: validate-project
 
 on:
   workflow_call:
+    inputs:
+      theme-dir:
+        description: Folder of the generated app theme (tokens.css, components.css, theme.json), relative to the repository root.
+        type: string
+        default: ''
+      theme-rust:
+        description: Path of the generated Rust theme module, relative to the repository root.
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -49,3 +63,16 @@ jobs:
           else
             echo "no assets/brand/monogram.json — skipped"
           fi
+      # The app theme must match theme/ here and the accent in project.yml.
+      - name: Check the app theme
+        if: inputs.theme-dir != '' || inputs.theme-rust != ''
+        working-directory: website
+        env:
+          REPO: ../${{ github.event.repository.name }}
+          THEME_DIR: ${{ inputs.theme-dir }}
+          THEME_RUST: ${{ inputs.theme-rust }}
+        run: |
+          set -- "$REPO/docs/site/project.yml" --check
+          if [ -n "$THEME_DIR" ]; then set -- "$@" --out "$REPO/$THEME_DIR"; fi
+          if [ -n "$THEME_RUST" ]; then set -- "$@" --rust "$REPO/$THEME_RUST"; fi
+          node scripts/theme.ts "$@"
