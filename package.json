@@ -15,7 +15,9 @@
     "preview": "astro preview",
     "check": "astro check",
     "monogram": "node scripts/monogram.ts",
-    "readme-header": "node scripts/readme-header.ts"
+    "readme-header": "node scripts/readme-header.ts",
+    "theme": "node scripts/theme.ts",
+    "test": "node --test theme/lib.test.ts"
   },
   "dependencies": {
     "astro": "7.4.7",

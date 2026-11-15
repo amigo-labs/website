@@ -1,0 +1,59 @@
+{
+  "$comment": "Source of the amigo app theme. scripts/theme.ts turns it, plus one app's accent from docs/site/project.yml, into tokens.css, components.css and Rust constants. Every colour here is checked by theme/lib.test.ts.",
+  "version": 1,
+  "defaultAccent": "#f5e554",
+  "neutrals": {
+    "dark": {
+      "bg": "#15161a",
+      "surface": "#1d1e23",
+      "surface-raised": "#26272d",
+      "hover": "#2e3037",
+      "active": "#383a43",
+      "border": "#34363e",
+      "border-strong": "#7c808c",
+      "text": "#e8e9ed",
+      "text-secondary": "#b4b7c0",
+      "text-muted": "#9a9da8",
+      "on-accent": "#111318"
+    },
+    "light": {
+      "bg": "#f4f5f7",
+      "surface": "#ffffff",
+      "surface-raised": "#eceef2",
+      "hover": "#e4e6eb",
+      "active": "#d8dbe2",
+      "border": "#d9dce3",
+      "border-strong": "#7d828e",
+      "text": "#1a1c22",
+      "text-secondary": "#4a4e59",
+      "text-muted": "#626773",
+      "on-accent": "#ffffff"
+    }
+  },
+  "status": { "success": "#22c55e", "warning": "#eab308", "danger": "#ef4444" },
+  "shadow": {
+    "dark": { "elev-1": "0 1px 2px rgb(0 0 0 / 0.4)", "elev-2": "0 6px 16px rgb(0 0 0 / 0.45)", "elev-3": "0 16px 40px rgb(0 0 0 / 0.55)" },
+    "light": { "elev-1": "0 1px 2px rgb(20 24 36 / 0.08)", "elev-2": "0 6px 16px rgb(20 24 36 / 0.12)", "elev-3": "0 16px 40px rgb(20 24 36 / 0.18)" }
+  },
+  "fonts": {
+    "sans": "'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    "mono": "ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace"
+  },
+  "text": {
+    "display": { "size": 32, "line": 38, "weight": 650, "font": "sans" },
+    "title-lg": { "size": 24, "line": 30, "weight": 650, "font": "sans" },
+    "title": { "size": 20, "line": 26, "weight": 600, "font": "sans" },
+    "title-sm": { "size": 16, "line": 22, "weight": 600, "font": "sans" },
+    "body-lg": { "size": 16, "line": 24, "weight": 400, "font": "sans" },
+    "body": { "size": 14, "line": 20, "weight": 400, "font": "sans" },
+    "body-sm": { "size": 13, "line": 18, "weight": 400, "font": "sans" },
+    "caption": { "size": 12, "line": 16, "weight": 400, "font": "sans" },
+    "label": { "size": 11, "line": 16, "weight": 600, "font": "sans" },
+    "code": { "size": 13, "line": 20, "weight": 400, "font": "mono" }
+  },
+  "space": { "space-1": 4, "space-2": 8, "space-3": 12, "space-4": 16, "space-6": 24, "space-8": 32, "space-12": 48, "space-16": 64 },
+  "control": { "control-sm": 24, "control-md": 32, "control-lg": 40 },
+  "radius": { "radius-xs": 4, "radius-sm": 6, "radius-md": 8, "radius-lg": 12, "radius-full": 9999 },
+  "z": { "z-sticky": 20, "z-nav": 40, "z-panel": 50, "z-menu": 60, "z-modal": 100, "z-toast": 300 },
+  "motion": { "dur-fast": "150ms", "dur-base": "250ms", "ease-out": "cubic-bezier(0.25, 1, 0.5, 1)" }
+}

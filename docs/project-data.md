@@ -175,6 +175,32 @@ The reusable `validate-project.yml` workflow fails when `assets/brand/` no
 longer matches `project.yml`, so a new colour or monogram cannot leave stale
 app icons behind.
 
+## App theme
+
+Every app has the same look: surfaces, text, status colours, type, sizes and
+components come from `theme/` in this repository, and the only thing an app
+owns is its `accent`. The theme files are generated, never edited by hand:
+
+```bash
+# in amigo-labs/website, next to the project checkout
+pnpm theme amigo-labs/amigo-pincel --out ../amigo-pincel/ui/src/theme
+pnpm theme amigo-labs/amigo-blinzel --rust ../amigo-blinzel/crates/blinzel-ui/src/theme.rs
+```
+
+`--out` writes `tokens.css` (every token as a `--am-*` custom property, dark
+and light), `components.css` (the `am-*` classes) and `theme.json` (the
+accent and theme version they were made from); `--rust` writes the same
+values as Rust constants for an app that draws its own interface. What the
+tokens mean and how to use them: [`theme/README.md`](../theme/README.md).
+
+The accent is split into roles so it stays legible: the brand colour itself
+wherever it holds the contrast, a lighter or darker shade of the same hue
+where it does not. The command refuses an accent it cannot make legible.
+
+The reusable `validate-project.yml` workflow takes `theme-dir` and
+`theme-rust` and fails when those files no longer match `theme/` or the
+accent in `project.yml`.
+
 ## README header and badges
 
 Every project README starts with the same header: the monogram, the name and
