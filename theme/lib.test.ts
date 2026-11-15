@@ -62,9 +62,11 @@ test('tokens.css declares every token in every mode block', () => {
   assert.match(css, /--am-text-body: 400 14px\/20px var\(--am-font-sans\);/);
 });
 
-test('components.css uses only tokens tokens.css declares, and no raw colours', () => {
+test('components.css uses only tokens tokens.css declares or its own properties, and no raw colours', () => {
   const css = readFileSync(join(import.meta.dirname, 'components.css'), 'utf8');
   const declared = new Set([...tokensCss(buildTheme(source, source.defaultAccent)).matchAll(/(--am-[a-z0-9-]+):/g)].map((m) => m[1]));
+  // A component may declare a property of its own (the slider's fill share).
+  for (const m of css.matchAll(/(--am-[a-z0-9-]+):/g)) declared.add(m[1]);
   const used = new Set([...css.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]));
   assert.deepEqual([...used].filter((u) => !declared.has(u)), []);
   assert.deepEqual(css.match(/#[0-9a-f]{3,8}\b|\brgba?\(/gi) ?? [], []);
