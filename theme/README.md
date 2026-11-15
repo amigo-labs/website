@@ -62,9 +62,12 @@ look.
 
 ## Components
 
-`components.css` has Button, Field, Toggle (switch, checkbox, radio),
+`components.css` has Button, Field, Toggle (switch, checkbox, radio), Slider,
 SegmentedControl, Tabs, Chip, ProgressBar, Banner, Panel, list rows, Menu
-and Dialog as plain classes (`am-btn am-btn--primary`, `am-input`, …). An app
+and Dialog as plain classes (`am-btn am-btn--primary`, `am-input`, …).
+Button, Field and SegmentedControl have a dense variant (`--sm`, 24px) for
+editors and inspectors. The slider (`am-range`) shows its travelled part in
+the accent: set `--am-range-fill` to the value as a percentage on the input. An app
 uses them directly or wraps them in its own components; it does not restyle
 them.
 
