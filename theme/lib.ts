@@ -2,14 +2,14 @@
 // sizes for every app, plus the app's own accent (docs/site/project.yml)
 // split into roles. Pure functions; scripts/theme.ts writes the files.
 
-export type Mode = 'dark' | 'light';
-export const MODES: readonly Mode[] = ['dark', 'light'];
+export type Mode = "dark" | "light";
+export const MODES: readonly Mode[] = ["dark", "light"];
 
 export interface TextStyle {
   size: number;
   line: number;
   weight: number;
-  font: 'sans' | 'mono';
+  font: "sans" | "mono";
 }
 
 export interface ThemeSource {
@@ -18,7 +18,7 @@ export interface ThemeSource {
   neutrals: Record<Mode, Record<string, string>>;
   status: Record<string, string>;
   shadow: Record<Mode, Record<string, string>>;
-  fonts: Record<'sans' | 'mono', string>;
+  fonts: Record<"sans" | "mono", string>;
   text: Record<string, TextStyle>;
   space: Record<string, number>;
   control: Record<string, number>;
@@ -42,15 +42,30 @@ type Rgb = [number, number, number];
 function rgb(hex: string): Rgb {
   const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
   if (!m) throw new Error(`${hex}: expected #rrggbb`);
-  return [parseInt(m[1]!, 16) / 255, parseInt(m[2]!, 16) / 255, parseInt(m[3]!, 16) / 255];
+  return [
+    parseInt(m[1]!, 16) / 255,
+    parseInt(m[2]!, 16) / 255,
+    parseInt(m[3]!, 16) / 255,
+  ];
 }
 
 function hex(c: Rgb): string {
-  return '#' + c.map((v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, '0')).join('');
+  return (
+    "#" +
+    c
+      .map((v) =>
+        Math.round(Math.min(1, Math.max(0, v)) * 255)
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")
+  );
 }
 
-const toLinear = (v: number): number => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
-const toGamma = (v: number): number => (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055);
+const toLinear = (v: number): number =>
+  v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+const toGamma = (v: number): number =>
+  v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
 
 function luminance(color: string): number {
   const [r, g, b] = rgb(color).map(toLinear) as Rgb;
@@ -87,15 +102,21 @@ function fromOklab([L, a, b]: Rgb): string {
   ]);
 }
 
-const worst = (color: string, grounds: readonly string[]): number => Math.min(...grounds.map((g) => contrast(color, g)));
+const worst = (color: string, grounds: readonly string[]): number =>
+  Math.min(...grounds.map((g) => contrast(color, g)));
 
 /**
  * `color`, moved in OKLab lightness (lighter in dark mode, darker in light)
  * until it holds `target` on every ground. A colour that already does is
  * returned unchanged, so a brand colour stays exact wherever it can.
  */
-function fit(color: string, grounds: readonly string[], target: number, mode: Mode): string {
-  const step = mode === 'dark' ? 0.004 : -0.004;
+function fit(
+  color: string,
+  grounds: readonly string[],
+  target: number,
+  mode: Mode,
+): string {
+  const step = mode === "dark" ? 0.004 : -0.004;
   let lab = toOklab(color);
   let out = color;
   for (let i = 0; i < 250 && worst(out, grounds) < target; i++) {
@@ -108,7 +129,9 @@ function fit(color: string, grounds: readonly string[], target: number, mode: Mo
 function mix(a: string, b: string, share: number): string {
   const ca = rgb(a);
   const cb = rgb(b);
-  return hex([0, 1, 2].map((i) => ca[i]! * share + cb[i]! * (1 - share)) as Rgb);
+  return hex(
+    [0, 1, 2].map((i) => ca[i]! * share + cb[i]! * (1 - share)) as Rgb,
+  );
 }
 
 function need(map: Record<string, string>, key: string): string {
@@ -127,15 +150,28 @@ export interface Roles {
 }
 
 /** Splits one hue into the roles a theme needs, for one mode. */
-export function roles(base: string, neutrals: Record<string, string>, mode: Mode): Roles {
-  const grounds = [need(neutrals, 'bg'), need(neutrals, 'surface'), need(neutrals, 'surface-raised')];
-  const surface = need(neutrals, 'surface');
+export function roles(
+  base: string,
+  neutrals: Record<string, string>,
+  mode: Mode,
+): Roles {
+  const grounds = [
+    need(neutrals, "bg"),
+    need(neutrals, "surface"),
+    need(neutrals, "surface-raised"),
+  ];
+  const surface = need(neutrals, "surface");
   const fill = fit(base, grounds, MARK_CONTRAST + MARGIN, mode);
   let ink = fit(base, grounds, TEXT_CONTRAST + MARGIN, mode);
   let subtle = mix(ink, surface, SUBTLE);
   // The subtle fill depends on the ink and the ink must read on it.
   for (let i = 0; i < 20; i++) {
-    ink = fit(ink, [...grounds, need(neutrals, 'hover'), subtle], TEXT_CONTRAST + MARGIN, mode);
+    ink = fit(
+      ink,
+      [...grounds, need(neutrals, "hover"), subtle],
+      TEXT_CONTRAST + MARGIN,
+      mode,
+    );
     subtle = mix(ink, surface, SUBTLE);
   }
   return { fill, ink, subtle };
@@ -156,41 +192,58 @@ export function buildTheme(source: ThemeSource, accent: string): Theme {
     const n = source.neutrals[mode];
     const a = roles(accent, n, mode);
     const out: Record<string, string> = { ...n };
-    out['accent'] = a.fill;
-    out['accent-ink'] = a.ink;
-    out['accent-solid'] = a.ink;
-    out['accent-subtle'] = a.subtle;
-    out['focus'] = a.ink;
+    out["accent"] = a.fill;
+    out["accent-ink"] = a.ink;
+    out["accent-solid"] = a.ink;
+    out["accent-subtle"] = a.subtle;
+    out["focus"] = a.ink;
     for (const [name, base] of Object.entries(source.status)) {
       const s = roles(base, n, mode);
       out[name] = s.fill;
       out[`${name}-ink`] = s.ink;
       out[`${name}-subtle`] = s.subtle;
     }
-    out['danger-solid'] = need(out, 'danger-ink');
+    out["danger-solid"] = need(out, "danger-ink");
     colors[mode] = out;
   }
-  return { accent: accent.toLowerCase(), colors, shadows: source.shadow, source };
+  return {
+    accent: accent.toLowerCase(),
+    colors,
+    shadows: source.shadow,
+    source,
+  };
 }
 
 /** Every pair the theme promises, as `[foreground, background, floor]`. */
 export function pairs(theme: Theme, mode: Mode): [string, string, number][] {
   const c = theme.colors[mode];
-  const surfaces = ['bg', 'surface', 'surface-raised'];
+  const surfaces = ["bg", "surface", "surface-raised"];
   const out: [string, string, number][] = [];
-  for (const g of [...surfaces, 'hover']) {
-    for (const t of ['text', 'text-secondary', 'text-muted', 'accent-ink']) out.push([t, g, TEXT_CONTRAST]);
+  for (const g of [...surfaces, "hover"]) {
+    for (const t of ["text", "text-secondary", "text-muted", "accent-ink"])
+      out.push([t, g, TEXT_CONTRAST]);
   }
-  out.push(['text', 'active', TEXT_CONTRAST]);
+  out.push(["text", "active", TEXT_CONTRAST]);
   for (const g of surfaces) {
-    out.push(['border-strong', g, MARK_CONTRAST], ['accent', g, MARK_CONTRAST], ['focus', g, MARK_CONTRAST]);
+    out.push(
+      ["border-strong", g, MARK_CONTRAST],
+      ["accent", g, MARK_CONTRAST],
+      ["focus", g, MARK_CONTRAST],
+    );
   }
-  out.push(['on-accent', 'accent-solid', TEXT_CONTRAST], ['on-accent', 'danger-solid', TEXT_CONTRAST]);
-  out.push(['accent-ink', 'accent-subtle', TEXT_CONTRAST], ['text', 'accent-subtle', TEXT_CONTRAST]);
+  out.push(
+    ["on-accent", "accent-solid", TEXT_CONTRAST],
+    ["on-accent", "danger-solid", TEXT_CONTRAST],
+  );
+  out.push(
+    ["accent-ink", "accent-subtle", TEXT_CONTRAST],
+    ["text", "accent-subtle", TEXT_CONTRAST],
+  );
   for (const s of Object.keys(theme.source.status)) {
-    for (const g of [...surfaces, 'hover', `${s}-subtle`]) out.push([`${s}-ink`, g, TEXT_CONTRAST]);
+    for (const g of [...surfaces, "hover", `${s}-subtle`])
+      out.push([`${s}-ink`, g, TEXT_CONTRAST]);
     for (const g of surfaces) out.push([s, g, MARK_CONTRAST]);
-    out.push(['text', `${s}-subtle`, TEXT_CONTRAST]);
+    out.push(["text", `${s}-subtle`, TEXT_CONTRAST]);
   }
   for (const [fg, bg] of out) {
     need(c, fg);
@@ -206,18 +259,22 @@ export function contrastFailures(theme: Theme): string[] {
     const c = theme.colors[mode];
     for (const [fg, bg, floor] of pairs(theme, mode)) {
       const ratio = contrast(need(c, fg), need(c, bg));
-      if (ratio < floor) failures.push(`${mode}: ${fg} on ${bg} is ${ratio.toFixed(2)}:1, needs ${floor}:1`);
+      if (ratio < floor)
+        failures.push(
+          `${mode}: ${fg} on ${bg} is ${ratio.toFixed(2)}:1, needs ${floor}:1`,
+        );
     }
   }
   return failures;
 }
 
-const HEADER = 'Generated by amigo-labs/website scripts/theme.ts — do not edit.';
+const HEADER =
+  "Generated by amigo-labs/website scripts/theme.ts — do not edit.";
 
 function declarations(map: Record<string, string>, indent: string): string {
   return Object.entries(map)
     .map(([k, v]) => `${indent}--am-${k}: ${v};`)
-    .join('\n');
+    .join("\n");
 }
 
 /**
@@ -229,10 +286,13 @@ export function tokensCss(theme: Theme): string {
   const px = (m: Record<string, number>): Record<string, string> =>
     Object.fromEntries(Object.entries(m).map(([k, v]) => [k, `${v}px`]));
   const shared: Record<string, string> = {
-    'font-sans': s.fonts.sans,
-    'font-mono': s.fonts.mono,
+    "font-sans": s.fonts.sans,
+    "font-mono": s.fonts.mono,
     ...Object.fromEntries(
-      Object.entries(s.text).map(([k, t]) => [`text-${k}`, `${t.weight} ${t.size}px/${t.line}px var(--am-font-${t.font})`]),
+      Object.entries(s.text).map(([k, t]) => [
+        `text-${k}`,
+        `${t.weight} ${t.size}px/${t.line}px var(--am-font-${t.font})`,
+      ]),
     ),
     ...px(s.space),
     ...px(s.control),
@@ -244,37 +304,45 @@ export function tokensCss(theme: Theme): string {
     `${indent}color-scheme: ${m};\n${declarations(theme.colors[m], indent)}\n${declarations(theme.shadows[m], indent)}`;
   return `/* ${HEADER} Accent ${theme.accent}, theme version ${s.version}. */
 :root {
-${mode('dark', '  ')}
-${declarations(shared, '  ')}
+${mode("dark", "  ")}
+${declarations(shared, "  ")}
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
-${mode('light', '    ')}
+${mode("light", "    ")}
   }
 }
 :root[data-theme='light'] {
-${mode('light', '  ')}
+${mode("light", "  ")}
 }
 `;
 }
 
 /** theme.json next to the generated files: what they were made from. */
 export function manifest(theme: Theme): string {
-  return JSON.stringify({ accent: theme.accent, version: theme.source.version }, null, 2) + '\n';
+  return (
+    JSON.stringify(
+      { accent: theme.accent, version: theme.source.version },
+      null,
+      2,
+    ) + "\n"
+  );
 }
 
-const rustName = (k: string): string => k.replace(/-/g, '_');
+const rustName = (k: string): string => k.replace(/-/g, "_");
 
 /** A Rust module with the same values, for apps that draw their own UI. */
 export function rustModule(theme: Theme): string {
   const s = theme.source;
   const keys = Object.keys(theme.colors.dark);
   const palette = (m: Mode): string =>
-    keys.map((k) => `    ${rustName(k)}: 0x${need(theme.colors[m], k).slice(1)},`).join('\n');
+    keys
+      .map((k) => `    ${rustName(k)}: 0x${need(theme.colors[m], k).slice(1)},`)
+      .join("\n");
   const consts = (m: Record<string, number>): string =>
     Object.entries(m)
       .map(([k, v]) => `pub const ${rustName(k).toUpperCase()}: f32 = ${v}.0;`)
-      .join('\n');
+      .join("\n");
   return `// ${HEADER}
 // Accent ${theme.accent}, theme version ${s.version}.
 
@@ -283,17 +351,17 @@ export function rustModule(theme: Theme): string {
 /// One mode's colours as \`0xRRGGBB\`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Palette {
-${keys.map((k) => `    pub ${rustName(k)}: u32,`).join('\n')}
+${keys.map((k) => `    pub ${rustName(k)}: u32,`).join("\n")}
 }
 
 /// The dark palette, the default.
 pub const DARK: Palette = Palette {
-${palette('dark')}
+${palette("dark")}
 };
 
 /// The light palette.
 pub const LIGHT: Palette = Palette {
-${palette('light')}
+${palette("light")}
 };
 
 /// A text style: size and line height in px, weight.
@@ -308,9 +376,14 @@ pub struct TextStyle {
 ${Object.entries(s.text)
   .map(
     ([k, t]) =>
-      `pub const TEXT_${rustName(k).toUpperCase()}: TextStyle = TextStyle { size: ${t.size}.0, line: ${t.line}.0, weight: ${t.weight}, mono: ${t.font === 'mono'} };`,
+      `pub const TEXT_${rustName(k).toUpperCase()}: TextStyle = TextStyle {
+    size: ${t.size}.0,
+    line: ${t.line}.0,
+    weight: ${t.weight},
+    mono: ${t.font === "mono"},
+};`,
   )
-  .join('\n')}
+  .join("\n")}
 
 ${consts(s.space)}
 ${consts(s.control)}
