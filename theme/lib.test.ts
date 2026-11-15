@@ -79,4 +79,8 @@ test('the Rust module carries both palettes', () => {
   assert.match(rs, /pub const LIGHT: Palette = Palette \{/);
   assert.ok(rs.includes(`surface_raised: 0x${theme.colors.light['surface-raised']!.slice(1)},`));
   assert.match(rs, /pub const CONTROL_MD: f32 = 32\.0;/);
+  // rustfmt leaves the module as it is: no line over its default width, and
+  // struct literals one field per line.
+  assert.deepEqual(rs.split('\n').filter((l) => l.length > 100), []);
+  assert.match(rs, /pub const TEXT_BODY: TextStyle = TextStyle \{\n {4}size: 14\.0,\n/);
 });

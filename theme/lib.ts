@@ -308,7 +308,12 @@ pub struct TextStyle {
 ${Object.entries(s.text)
   .map(
     ([k, t]) =>
-      `pub const TEXT_${rustName(k).toUpperCase()}: TextStyle = TextStyle { size: ${t.size}.0, line: ${t.line}.0, weight: ${t.weight}, mono: ${t.font === 'mono'} };`,
+      `pub const TEXT_${rustName(k).toUpperCase()}: TextStyle = TextStyle {
+    size: ${t.size}.0,
+    line: ${t.line}.0,
+    weight: ${t.weight},
+    mono: ${t.font === 'mono'},
+};`,
   )
   .join('\n')}
 
