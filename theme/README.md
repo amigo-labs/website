@@ -63,7 +63,8 @@ look.
 ## Components
 
 `components.css` has Button, Field, Toggle (switch, checkbox, radio), Slider,
-SegmentedControl, Tabs, Chip, ProgressBar, Banner, Panel, list rows, Menu
+SegmentedControl, Tabs, Chip, ProgressBar, Banner (`--float` over content),
+Panel (`--docked` for sidebars and docks), list rows, Menu
 and Dialog as plain classes (`am-btn am-btn--primary`, `am-input`, …).
 Button, Field and SegmentedControl have a dense variant (`--sm`, 24px) for
 editors and inspectors. The slider (`am-range`) shows its travelled part in
