@@ -2,16 +2,16 @@
   "$comment": "Written by `node scripts/fetch-data.ts --lock` (site.yml, refresh). A change here is a push, and Cloudflare rebuilds the site.",
   "projects": {
     "pincel": {
-      "release": "v1.17.0",
-      "hash": "f02efb6be1c4e4f6"
+      "release": "v1.18.0",
+      "hash": "f1f899de94cd6e2c"
     },
     "blinzel": {
       "release": "v1.8.0",
       "hash": "707bbaff8658caf8"
     },
     "krake": {
-      "release": "v0.1.2",
-      "hash": "9183abf4c8445b5a"
+      "release": "v0.1.4",
+      "hash": "0d044420c2e1ad46"
     },
     "native": {
       "release": "typst@0.4.0",
