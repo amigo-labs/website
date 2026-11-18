@@ -10,16 +10,16 @@
       "hash": "707bbaff8658caf8"
     },
     "krake": {
-      "release": "v0.1.5",
-      "hash": "64a8d2dfdf5359da"
+      "release": "v0.1.7",
+      "hash": "f67093e4b69fc010"
     },
     "native": {
       "release": "typst@0.4.0",
       "hash": "06a8a720370a4642"
     },
     "sofarr": {
-      "release": "v1.1.0",
-      "hash": "3168a5a4003b044c"
+      "release": "v1.2.0",
+      "hash": "b3c15acd9d8e1b85"
     },
     "trommel": {
       "release": null,
